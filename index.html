@@ -97,8 +97,8 @@
     .header {
       background: var(--primary);
       color: white;
-      padding: 12px 16px;
-      padding-top: calc(12px + var(--safe-area-top));
+      padding: 14px 16px;
+      padding-top: calc(14px + var(--safe-area-top));
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -117,8 +117,9 @@
     }
 
     .header-logo {
-      height: 32px;
+      height: 36px;
       width: auto;
+      max-width: 180px;
     }
 
     .header-back {
@@ -160,6 +161,7 @@
       background: var(--surface);
       border-top: 1px solid var(--border);
       display: flex;
+      padding-top: 2px;
       padding-bottom: var(--safe-area-bottom);
       flex-shrink: 0;
     }
@@ -169,7 +171,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 10px 0;
+      padding: 12px 0;
       background: none;
       border: none;
       color: var(--text-secondary);
@@ -177,7 +179,7 @@
       font-weight: 500;
       cursor: pointer;
       transition: color 0.2s;
-      gap: 4px;
+      gap: 5px;
     }
 
     .nav-item.active {
@@ -193,8 +195,8 @@
     }
 
     .nav-item .nav-icon {
-      width: 26px;
-      height: 26px;
+      width: 32px;
+      height: 32px;
       object-fit: contain;
       opacity: 0.6;
     }
@@ -370,13 +372,13 @@
       white-space: nowrap;
     }
 
-    .badge-flying { background: #E3F2FD; color: #1565C0; }
-    .badge-grass { background: #E8F5E9; color: #2E7D32; }
-    .badge-water { background: #E0F7FA; color: #00838F; }
+    .badge-bird { background: #E3F2FD; color: #1565C0; }
+    .badge-plant { background: #E8F5E9; color: #2E7D32; }
+    .badge-fish { background: #E0F7FA; color: #00838F; }
+    .badge-aquatic { background: #B2EBF2; color: #006064; }
     .badge-bug { background: #FFF8E1; color: #F57F17; }
-    .badge-normal { background: #EFEBE9; color: #5D4037; }
+    .badge-mammal { background: #EFEBE9; color: #5D4037; }
     .badge-fungus { background: #F3E5F5; color: #7B1FA2; }
-    .badge-poison { background: #FCE4EC; color: #C2185B; }
     .badge-reptile { background: #FBE9E7; color: #D84315; }
     .badge-amphibian { background: #E0F2F1; color: #00695C; }
     .badge-mollusk { background: #FFF3E0; color: #EF6C00; }
@@ -1010,8 +1012,10 @@
     }
 
     .onboarding-logo {
-      width: 120px;
-      height: 120px;
+      width: auto;
+      height: auto;
+      max-width: 260px;
+      max-height: 100px;
       margin-bottom: 24px;
       object-fit: contain;
     }
@@ -1267,14 +1271,14 @@
     // Constants
     const TYPE_BADGES = {
       bug: { icon: '🐛', label: 'Bug' },
-      flying: { icon: '🦋', label: 'Flying' },
-      water: { icon: '🌊', label: 'Water' },
-      grass: { icon: '🌿', label: 'Grass' },
+      bird: { icon: '🐦', label: 'Bird' },
+      fish: { icon: '🐟', label: 'Fish' },
+      aquatic: { icon: '🌊', label: 'Aquatic' },
+      plant: { icon: '🌿', label: 'Plant' },
       fungus: { icon: '🍄', label: 'Fungus' },
-      normal: { icon: '🐾', label: 'Normal' },
+      mammal: { icon: '🐾', label: 'Mammal' },
       amphibian: { icon: '🐸', label: 'Amphibian' },
       reptile: { icon: '🦎', label: 'Reptile' },
-      poison: { icon: '☠️', label: 'Poison' },
       mollusk: { icon: '🐚', label: 'Mollusk' },
       micro: { icon: '🔬', label: 'Micro' }
     };
@@ -1324,7 +1328,7 @@ Response format:
     "family": "e.g., Nymphalidae",
     "genus": "e.g., Danaus"
   },
-  "typeBadge": "one of: bug, flying, water, grass, fungus, normal, amphibian, reptile, poison, mollusk, micro",
+  "typeBadge": "one of: bug, bird, fish, aquatic, plant, fungus, mammal, amphibian, reptile, mollusk, micro",
   "description": "2-3 engaging sentences about this species for a general audience",
   "funFacts": ["Interesting fact 1", "Interesting fact 2", "Interesting fact 3"]
 }
@@ -1338,16 +1342,16 @@ If you cannot identify the species, return:
 }
 
 Type badge guidelines:
-- bug: insects, arachnids, myriapods
-- flying: birds, bats (prioritize this for flying creatures)
-- water: fish, marine mammals, aquatic invertebrates
-- grass: plants, trees, flowers, ferns
+- bug: insects, arachnids, myriapods (including butterflies, beetles, spiders)
+- bird: all birds
+- fish: fish (freshwater and saltwater)
+- aquatic: marine mammals, aquatic invertebrates, other water-dwelling creatures that aren't fish
+- plant: plants, trees, flowers, ferns, mosses
 - fungus: mushrooms, molds, lichens
-- normal: land mammals
+- mammal: land mammals, bats
 - amphibian: frogs, salamanders, newts
 - reptile: snakes, lizards, turtles, crocodilians
-- poison: primarily known for being venomous/poisonous
-- mollusk: snails, slugs, clams, octopi
+- mollusk: snails, slugs, clams, octopi, squid
 - micro: protozoa, microscopic organisms
 
 Choose the single most characteristic type.`;
@@ -1815,7 +1819,7 @@ Choose the single most characteristic type.`;
     }
 
     function getBadgeHTML(typeBadge) {
-      const badge = TYPE_BADGES[typeBadge] || TYPE_BADGES.normal;
+      const badge = TYPE_BADGES[typeBadge] || TYPE_BADGES.mammal;
       return `<span class="badge badge-${typeBadge}">${badge.icon} ${badge.label}</span>`;
     }
 
@@ -2692,7 +2696,7 @@ Choose the single most characteristic type.`;
               <div class="timeline-entries">
                 ${dayEncounters.map(e => {
                   const species = allSpecies[e.speciesKey] || {};
-                  const badge = TYPE_BADGES[species.typeBadge] || TYPE_BADGES.normal;
+                  const badge = TYPE_BADGES[species.typeBadge] || TYPE_BADGES.mammal;
                   return `
                     <div class="timeline-entry" onclick="viewSpecies('${e.speciesKey}')">
                       <span>${badge.icon}</span>
@@ -2742,7 +2746,7 @@ Choose the single most characteristic type.`;
         const bounds = [];
         locatedEncounters.forEach(e => {
           const species = allSpecies[e.speciesKey] || {};
-          const badge = TYPE_BADGES[species.typeBadge] || TYPE_BADGES.normal;
+          const badge = TYPE_BADGES[species.typeBadge] || TYPE_BADGES.mammal;
           
           const marker = L.marker([e.location.lat, e.location.lng]).addTo(map);
           marker.bindPopup(`
@@ -3026,7 +3030,23 @@ Choose the single most characteristic type.`;
     }
 
     // Navigation
+    function stopCamera() {
+      if (state.cameraStream) {
+        state.cameraStream.getTracks().forEach(track => track.stop());
+        state.cameraStream = null;
+      }
+      const video = $('#cameraVideo');
+      if (video) {
+        video.srcObject = null;
+      }
+    }
+
     function navigateTo(screen) {
+      // Stop camera when leaving capture screen
+      if (state.currentScreen === 'camera' && screen !== 'camera') {
+        stopCamera();
+      }
+
       // Clean up maps when leaving screens
       if (state.maps.species) {
         state.maps.species.remove();
@@ -3069,10 +3089,18 @@ Choose the single most characteristic type.`;
       renderApp();
     });
 
-    // Handle visibility change to reinit camera
+    // Handle visibility change to manage camera
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && state.currentScreen === 'camera') {
-        initCamera();
+      if (document.hidden) {
+        // Stop camera when app goes to background
+        if (state.currentScreen === 'camera') {
+          stopCamera();
+        }
+      } else {
+        // Restart camera when app comes back to foreground
+        if (state.currentScreen === 'camera') {
+          initCamera();
+        }
       }
     });
   </script>
