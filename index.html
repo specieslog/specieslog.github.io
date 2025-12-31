@@ -389,14 +389,19 @@
       background: var(--surface);
       padding: 12px 16px;
       display: flex;
+      flex-direction: column;
       gap: 10px;
       border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
+    }
+
+    .filter-bar-row {
+      display: flex;
+      gap: 10px;
     }
 
     .search-input {
       flex: 1;
-      min-width: 150px;
+      width: 100%;
       padding: 10px 14px;
       border: 1px solid var(--border);
       border-radius: 20px;
@@ -410,13 +415,38 @@
     }
 
     .filter-select {
-      padding: 10px 14px;
+      flex: 1;
+      padding: 10px 36px 10px 14px;
       border: 1px solid var(--border);
       border-radius: 20px;
       font-size: 13px;
       background: white;
       cursor: pointer;
       outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .filter-results {
+      background: var(--surface);
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-results:empty {
+      display: none;
+    }
+
+    .clear-filters {
+      color: var(--primary);
+      cursor: pointer;
+      margin-left: 8px;
+      text-decoration: underline;
     }
 
     /* Empty State */
@@ -634,6 +664,29 @@
     .encounter-date {
       font-size: 13px;
       color: var(--text-secondary);
+    }
+
+    .encounter-variety {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary);
+      margin-bottom: 2px;
+    }
+
+    .varieties-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .variety-tag {
+      display: inline-block;
+      padding: 6px 12px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      font-size: 13px;
+      color: var(--text-primary);
     }
 
     .mini-map {
@@ -907,6 +960,13 @@
       margin-bottom: 4px;
     }
 
+    .id-result-variety {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
     .id-result .scientific-name {
       font-size: 16px;
       margin-bottom: 12px;
@@ -937,7 +997,6 @@
       font-size: 12px;
       padding: 4px 10px;
       border-radius: 12px;
-      margin-left: 8px;
     }
 
     .confidence-high {
@@ -1286,7 +1345,6 @@
     const PROVIDERS = {
       gemini: {
         name: 'Google Gemini',
-        icon: '✨',
         tagline: 'Fast & free tier',
         model: 'gemini-3-flash-preview',
         endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent',
@@ -1294,7 +1352,6 @@
       },
       claude: {
         name: 'Anthropic Claude',
-        icon: '🎭',
         tagline: 'Detailed descriptions',
         model: 'claude-sonnet-4-5-20250514',
         endpoint: 'https://api.anthropic.com/v1/messages',
@@ -1302,7 +1359,6 @@
       },
       openai: {
         name: 'OpenAI',
-        icon: '🤖',
         tagline: 'Reliable & popular',
         model: 'gpt-4o-mini',
         endpoint: 'https://api.openai.com/v1/chat/completions',
@@ -1318,8 +1374,9 @@ Response format:
 {
   "identified": true,
   "confidence": "high" | "medium" | "low",
-  "commonName": "Common name of the species",
+  "commonName": "Common name of the species (general, e.g., 'Apple' not 'Fuji Apple')",
   "scientificName": "Genus species",
+  "variety": "Specific variety, cultivar, breed, or subspecies if identifiable (e.g., 'Fuji' for a Fuji apple, 'Holstein' for a Holstein cow, 'Mallard' for a Mallard duck), or null if not applicable or identifiable",
   "taxonomy": {
     "kingdom": "e.g., Animalia",
     "phylum": "e.g., Arthropoda",
@@ -1384,9 +1441,11 @@ Choose the single most characteristic type.`;
         }
       },
 
-      normalizeSpeciesKey(scientificName, commonName) {
-        const combined = `${scientificName}_${commonName}`.toLowerCase();
-        return combined.replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      normalizeSpeciesKey(scientificName) {
+        // Extract only genus + species (first two words) for consistent keying
+        // This handles cases where LLMs return author citations like "Vulpes vulpes Linnaeus, 1758"
+        const binomial = scientificName.trim().split(/\s+/).slice(0, 2).join(' ');
+        return binomial.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
       },
 
       async getSpecies(speciesKey) {
@@ -1400,7 +1459,7 @@ Choose the single most characteristic type.`;
 
       async saveSpecies(entry) {
         const species = await this.get('species') || {};
-        const speciesKey = this.normalizeSpeciesKey(entry.scientificName, entry.commonName);
+        const speciesKey = this.normalizeSpeciesKey(entry.scientificName);
         species[speciesKey] = {
           ...entry,
           speciesKey,
@@ -1504,139 +1563,184 @@ Choose the single most characteristic type.`;
       
       console.log('Calling Gemini API...');
       
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: IDENTIFICATION_PROMPT },
-              {
-                inline_data: {
-                  mime_type: 'image/jpeg',
-                  data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: IDENTIFICATION_PROMPT },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+                  }
                 }
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 1024
-          }
-        })
-      });
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 4096
+            }
+          })
+        });
+        
+        clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Gemini API error:', response.status, errorData);
-        throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
-      }
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Gemini API error:', response.status, errorData);
+          throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
 
-      const data = await response.json();
-      console.log('Gemini response received');
-      
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) {
-        console.error('No text in Gemini response:', data);
-        throw new Error('No response from Gemini');
+        const data = await response.json();
+        console.log('Gemini response received');
+        
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          console.error('No text in Gemini response:', data);
+          throw new Error('No response from Gemini');
+        }
+        
+        return parseJSONResponse(text);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          throw new Error('Gemini request timed out. Please try again.');
+        }
+        throw err;
       }
-      
-      return parseJSONResponse(text);
     }
 
     async function identifyWithClaude(imageBase64, apiKey) {
       console.log('Calling Claude API...');
       
-      const response = await fetch(PROVIDERS.claude.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: PROVIDERS.claude.model,
-          max_tokens: 1024,
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: 'image/jpeg',
-                  data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
-                }
-              },
-              { type: 'text', text: IDENTIFICATION_PROMPT }
-            ]
-          }]
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Claude API error:', response.status, errorData);
-        throw new Error(`Claude API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
-      }
-
-      const data = await response.json();
-      console.log('Claude response received');
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
-      const text = data.content?.[0]?.text;
-      if (!text) {
-        console.error('No text in Claude response:', data);
-        throw new Error('No response from Claude');
+      try {
+        const response = await fetch(PROVIDERS.claude.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: PROVIDERS.claude.model,
+            max_tokens: 4096,
+            messages: [{
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: 'image/jpeg',
+                    data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+                  }
+                },
+                { type: 'text', text: IDENTIFICATION_PROMPT }
+              ]
+            }]
+          })
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Claude API error:', response.status, errorData);
+          throw new Error(`Claude API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+
+        const data = await response.json();
+        console.log('Claude response received');
+        
+        const text = data.content?.[0]?.text;
+        if (!text) {
+          console.error('No text in Claude response:', data);
+          throw new Error('No response from Claude');
+        }
+        
+        return parseJSONResponse(text);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          throw new Error('Claude request timed out. Please try again.');
+        }
+        throw err;
       }
-      
-      return parseJSONResponse(text);
     }
 
     async function identifyWithOpenAI(imageBase64, apiKey) {
       console.log('Calling OpenAI API...');
       
-      const response = await fetch(PROVIDERS.openai.endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: PROVIDERS.openai.model,
-          max_tokens: 1024,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'text', text: IDENTIFICATION_PROMPT },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageBase64,
-                  detail: 'high'
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      try {
+        const response = await fetch(PROVIDERS.openai.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: PROVIDERS.openai.model,
+            max_tokens: 4096,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: IDENTIFICATION_PROMPT },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageBase64,
+                    detail: 'high'
+                  }
                 }
-              }
-            ]
-          }]
-        })
-      });
+              ]
+            }]
+          })
+        });
+        
+        clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('OpenAI API error:', response.status, errorData);
-        throw new Error(`OpenAI API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
-      }
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('OpenAI API error:', response.status, errorData);
+          throw new Error(`OpenAI API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
 
-      const data = await response.json();
-      console.log('OpenAI response received');
-      
-      const text = data.choices?.[0]?.message?.content;
-      if (!text) {
-        console.error('No text in OpenAI response:', data);
-        throw new Error('No response from OpenAI');
+        const data = await response.json();
+        console.log('OpenAI response received');
+        
+        const text = data.choices?.[0]?.message?.content;
+        if (!text) {
+          console.error('No text in OpenAI response:', data);
+          throw new Error('No response from OpenAI');
+        }
+        
+        return parseJSONResponse(text);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          throw new Error('OpenAI request timed out. Please try again.');
+        }
+        throw err;
       }
-      
-      return parseJSONResponse(text);
     }
 
     function parseJSONResponse(text) {
@@ -1780,6 +1884,7 @@ Choose the single most characteristic type.`;
     // ============================================
     let state = {
       currentScreen: 'camera',
+      previousScreen: 'camera',
       selectedSpecies: null,
       cameraStream: null,
       isIdentifying: false,
@@ -1908,7 +2013,7 @@ Choose the single most characteristic type.`;
             </button>
             <button class="nav-item" onclick="navigateTo('index')">
               <img src="index.png" alt="" class="nav-icon">
-              <span>Index</span>
+              <span>Discoveries</span>
             </button>
             <button class="nav-item" onclick="navigateTo('journey')">
               <img src="journey.png" alt="" class="nav-icon">
@@ -1919,18 +2024,31 @@ Choose the single most characteristic type.`;
 
         <div class="screen" id="screen-index">
           <header class="header">
-            <span class="header-title">Species Index</span>
+            <span class="header-title">Discoveries</span>
             <button class="header-action" onclick="navigateTo('settings')"><span class="material-symbols-rounded">settings</span></button>
           </header>
           <div class="filter-bar">
-            <input type="text" class="search-input" placeholder="Search species..." oninput="filterSpecies(this.value)">
-            <select class="filter-select" id="typeFilter" onchange="filterSpecies()">
-              <option value="">All Types</option>
-              ${Object.entries(TYPE_BADGES).map(([key, val]) => 
-                `<option value="${key}">${val.icon} ${val.label}</option>`
-              ).join('')}
-            </select>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search species..." oninput="filterSpecies(this.value)">
+            <div class="filter-bar-row">
+              <select class="filter-select" id="typeFilter" onchange="filterSpecies()">
+                <option value="">All Types</option>
+                ${Object.entries(TYPE_BADGES).map(([key, val]) => 
+                  `<option value="${key}">${val.icon} ${val.label}</option>`
+                ).join('')}
+              </select>
+              <select class="filter-select" id="sortFilter" onchange="filterSpecies()">
+                <option value="recent-seen">Recently Seen</option>
+                <option value="oldest-seen">Oldest Seen</option>
+                <option value="recent-added">Recently Added</option>
+                <option value="first-added">First Added</option>
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="name-desc">Name (Z-A)</option>
+                <option value="most-encountered">Most Encountered</option>
+                <option value="least-encountered">Least Encountered</option>
+              </select>
+            </div>
           </div>
+          <div class="filter-results" id="filterResults"></div>
           <div class="main-content" id="speciesList"></div>
           <nav class="bottom-nav">
             <button class="nav-item" onclick="navigateTo('camera')">
@@ -1939,7 +2057,7 @@ Choose the single most characteristic type.`;
             </button>
             <button class="nav-item active" onclick="navigateTo('index')">
               <img src="index.png" alt="" class="nav-icon">
-              <span>Index</span>
+              <span>Discoveries</span>
             </button>
             <button class="nav-item" onclick="navigateTo('journey')">
               <img src="journey.png" alt="" class="nav-icon">
@@ -1967,7 +2085,7 @@ Choose the single most characteristic type.`;
             </button>
             <button class="nav-item" onclick="navigateTo('index')">
               <img src="index.png" alt="" class="nav-icon">
-              <span>Index</span>
+              <span>Discoveries</span>
             </button>
             <button class="nav-item active" onclick="navigateTo('journey')">
               <img src="journey.png" alt="" class="nav-icon">
@@ -1988,6 +2106,13 @@ Choose the single most characteristic type.`;
 
       // Initialize camera
       initCamera();
+      
+      // Load filter preferences and apply to dropdowns
+      await loadFilterPreferences();
+      const typeFilter = $('#typeFilter');
+      const sortFilter = $('#sortFilter');
+      if (typeFilter) typeFilter.value = speciesFilter.type;
+      if (sortFilter) sortFilter.value = speciesFilter.sort;
       
       // Load initial data
       renderSpeciesIndex();
@@ -2037,7 +2162,7 @@ Choose the single most characteristic type.`;
                   <div class="provider-card ${onboardingState.selectedProvider === key ? 'selected' : ''}" 
                        onclick="selectProvider('${key}')">
                     <div class="provider-card-header">
-                      ${provider.icon} ${provider.name}
+                      ${provider.name}
                     </div>
                     <div class="provider-card-desc">${provider.tagline}</div>
                   </div>
@@ -2194,30 +2319,56 @@ Choose the single most characteristic type.`;
 
     async function capturePhoto() {
       const video = $('#cameraVideo');
-      if (!video || state.isIdentifying) return;
+      if (!video || state.isIdentifying) {
+        console.log('Cannot capture: video not ready or already identifying');
+        return;
+      }
+      
+      // Check if video is actually playing
+      if (video.readyState < 2) {
+        showToast('Camera not ready. Please wait.', 'error');
+        return;
+      }
 
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
 
-      // Compress image
-      const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
-      processImage(imageBase64);
+        // Compress image
+        const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        processImage(imageBase64);
+      } catch (err) {
+        console.error('Error capturing photo:', err);
+        showToast('Failed to capture photo', 'error');
+      }
     }
 
     function handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
+      
+      // Prevent duplicate processing
+      if (state.isIdentifying) {
+        console.log('Already processing, ignoring upload');
+        event.target.value = '';
+        return;
+      }
 
       console.log('File uploaded:', file.name, file.size, 'bytes');
 
       const reader = new FileReader();
       reader.onload = async (e) => {
-        // Compress uploaded image first
-        const compressed = await compressImage(e.target.result, 0.8, 1200);
-        console.log('Uploaded image compressed');
-        processImage(compressed);
+        try {
+          // Compress uploaded image first
+          const compressed = await compressImage(e.target.result, 0.8, 1200);
+          console.log('Uploaded image compressed');
+          processImage(compressed);
+        } catch (err) {
+          console.error('Error compressing image:', err);
+          showToast('Failed to process image', 'error');
+        }
       };
       reader.onerror = () => {
         showToast('Failed to read file', 'error');
@@ -2259,8 +2410,12 @@ Choose the single most characteristic type.`;
         if (err.message === 'NO_API_KEY') {
           showToast('Please configure an API key in settings.', 'error');
           navigateTo('settings');
+        } else if (err.message.includes('timed out')) {
+          showToast('Request timed out. Please try again.', 'error');
+        } else if (err.message.includes('API error')) {
+          showToast(err.message, 'error');
         } else {
-          showToast('Could not identify species. Please try again.', 'error');
+          showToast('Could not identify species: ' + err.message, 'error');
         }
       } finally {
         state.isIdentifying = false;
@@ -2290,21 +2445,22 @@ Choose the single most characteristic type.`;
         content.innerHTML = `
           <div class="id-result">
             <img src="${imageBase64}" class="id-result-image" alt="${result.commonName}">
-            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-              <h2>${result.commonName}</h2>
+            <h2>${result.commonName}</h2>
+            ${result.variety ? `<div class="id-result-variety">${result.variety}</div>` : ''}
+            <span class="scientific-name">${result.scientificName}</span>
+            <div class="mt-12" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <span class="confidence-indicator ${confidenceClass}">
                 ${result.confidence === 'high' ? '✓' : result.confidence === 'medium' ? '~' : '?'} 
                 ${result.confidence}
               </span>
+              ${getBadgeHTML(result.typeBadge)}
             </div>
-            <span class="scientific-name">${result.scientificName}</span>
-            <div class="mt-12">${getBadgeHTML(result.typeBadge)}</div>
             <p class="id-result-description">${result.description}</p>
             <div class="id-result-actions">
-              <button class="btn btn-primary" onclick="saveEncounter()">
+              <button class="btn btn-primary" id="saveEncounterBtn" onclick="saveEncounter()">
                 Save Encounter
               </button>
-              <button class="btn btn-secondary" onclick="closeModal('idResultModal')">
+              <button class="btn btn-secondary" id="retakeBtn" onclick="closeModal('idResultModal')">
                 Retake
               </button>
             </div>
@@ -2316,6 +2472,18 @@ Choose the single most characteristic type.`;
     }
 
     async function saveEncounter() {
+      const saveBtn = $('#saveEncounterBtn');
+      const retakeBtn = $('#retakeBtn');
+      
+      // Disable buttons and show saving state
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+      }
+      if (retakeBtn) {
+        retakeBtn.disabled = true;
+      }
+
       try {
         const result = state.identificationResult;
         const imageBase64 = state.pendingImage;
@@ -2323,6 +2491,14 @@ Choose the single most characteristic type.`;
         if (!result || !imageBase64) {
           console.error('Missing result or image', { result: !!result, image: !!imageBase64 });
           showToast('Error: Missing identification data', 'error');
+          // Re-enable buttons on error
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Encounter';
+          }
+          if (retakeBtn) {
+            retakeBtn.disabled = false;
+          }
           return;
         }
 
@@ -2333,7 +2509,7 @@ Choose the single most characteristic type.`;
         console.log('Image compressed from', Math.round(imageBase64.length / 1024), 'KB to', Math.round(compressedImage.length / 1024), 'KB');
 
         // Check if species already exists
-        const speciesKey = DB.normalizeSpeciesKey(result.scientificName, result.commonName);
+        const speciesKey = DB.normalizeSpeciesKey(result.scientificName);
         let existingSpecies = await DB.getSpecies(speciesKey);
         const isNewSpecies = !existingSpecies;
 
@@ -2368,6 +2544,7 @@ Choose the single most characteristic type.`;
         console.log('Adding encounter to database...');
         const encounter = await DB.addEncounter({
           speciesKey,
+          variety: result.variety || null,  // Store variety/subspecies with encounter
           photoUri: compressedImage,
           location,
           locationName,
@@ -2391,6 +2568,14 @@ Choose the single most characteristic type.`;
       } catch (err) {
         console.error('Error saving encounter:', err);
         showToast('Failed to save encounter: ' + err.message, 'error');
+        // Re-enable buttons on error
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Encounter';
+        }
+        if (retakeBtn) {
+          retakeBtn.disabled = false;
+        }
       }
     }
 
@@ -2427,17 +2612,49 @@ Choose the single most characteristic type.`;
 
     function closeModal(modalId) {
       $(`#${modalId}`).classList.remove('active');
+      // Clear pending image data when closing identification modal to free memory
+      if (modalId === 'idResultModal') {
+        state.pendingImage = null;
+        state.identificationResult = null;
+      }
     }
 
-    // Species Index
-    let speciesFilter = { search: '', type: '' };
+    // Discoveries (Species Index)
+    let speciesFilter = { search: '', type: '', sort: 'recent-seen' };
+
+    // Load persisted filter preferences
+    async function loadFilterPreferences() {
+      try {
+        const saved = localStorage.getItem('specieslog_filter_prefs');
+        if (saved) {
+          const prefs = JSON.parse(saved);
+          speciesFilter.type = prefs.type || '';
+          speciesFilter.sort = prefs.sort || 'recent-seen';
+        }
+      } catch (e) {
+        console.log('Could not load filter preferences');
+      }
+    }
+
+    function saveFilterPreferences() {
+      try {
+        localStorage.setItem('specieslog_filter_prefs', JSON.stringify({
+          type: speciesFilter.type,
+          sort: speciesFilter.sort
+        }));
+      } catch (e) {
+        console.log('Could not save filter preferences');
+      }
+    }
 
     async function renderSpeciesIndex() {
       const container = $('#speciesList');
+      const resultsContainer = $('#filterResults');
       if (!container) return;
 
       const allSpecies = await DB.getAllSpecies();
       const encounters = await DB.getEncounters();
+      const totalSpeciesCount = Object.keys(allSpecies).length;
       
       // Calculate encounter counts
       const encounterCounts = {};
@@ -2450,6 +2667,18 @@ Choose the single most characteristic type.`;
       encounters.forEach(e => {
         if (!speciesPhotos[e.speciesKey] && e.photoUri) {
           speciesPhotos[e.speciesKey] = e.photoUri;
+        }
+      });
+
+      // Calculate last seen and first seen timestamps for each species
+      const lastSeen = {};
+      const firstSeen = {};
+      encounters.forEach(e => {
+        if (!lastSeen[e.speciesKey] || e.timestamp > lastSeen[e.speciesKey]) {
+          lastSeen[e.speciesKey] = e.timestamp;
+        }
+        if (!firstSeen[e.speciesKey] || e.timestamp < firstSeen[e.speciesKey]) {
+          firstSeen[e.speciesKey] = e.timestamp;
         }
       });
 
@@ -2467,26 +2696,96 @@ Choose the single most characteristic type.`;
         speciesList = speciesList.filter(s => s.typeBadge === speciesFilter.type);
       }
 
-      // Sort by most recent encounter
-      const lastSeen = {};
-      encounters.forEach(e => {
-        if (!lastSeen[e.speciesKey] || e.timestamp > lastSeen[e.speciesKey]) {
-          lastSeen[e.speciesKey] = e.timestamp;
-        }
-      });
-      speciesList.sort((a, b) => {
-        const aTime = lastSeen[a.speciesKey] || '';
-        const bTime = lastSeen[b.speciesKey] || '';
-        return bTime.localeCompare(aTime);
-      });
+      const filteredCount = speciesList.length;
+      const isFiltered = speciesFilter.search || speciesFilter.type;
 
-      if (speciesList.length === 0) {
+      // Apply sort
+      switch (speciesFilter.sort) {
+        case 'recent-seen':
+          speciesList.sort((a, b) => {
+            const aTime = lastSeen[a.speciesKey] || '';
+            const bTime = lastSeen[b.speciesKey] || '';
+            return bTime.localeCompare(aTime);
+          });
+          break;
+        case 'oldest-seen':
+          speciesList.sort((a, b) => {
+            const aTime = lastSeen[a.speciesKey] || '';
+            const bTime = lastSeen[b.speciesKey] || '';
+            return aTime.localeCompare(bTime);
+          });
+          break;
+        case 'recent-added':
+          speciesList.sort((a, b) => {
+            const aTime = firstSeen[a.speciesKey] || '';
+            const bTime = firstSeen[b.speciesKey] || '';
+            return bTime.localeCompare(aTime);
+          });
+          break;
+        case 'first-added':
+          speciesList.sort((a, b) => {
+            const aTime = firstSeen[a.speciesKey] || '';
+            const bTime = firstSeen[b.speciesKey] || '';
+            return aTime.localeCompare(bTime);
+          });
+          break;
+        case 'name-asc':
+          speciesList.sort((a, b) => a.commonName.localeCompare(b.commonName));
+          break;
+        case 'name-desc':
+          speciesList.sort((a, b) => b.commonName.localeCompare(a.commonName));
+          break;
+        case 'most-encountered':
+          speciesList.sort((a, b) => {
+            const aCount = encounterCounts[a.speciesKey] || 0;
+            const bCount = encounterCounts[b.speciesKey] || 0;
+            if (bCount !== aCount) return bCount - aCount;
+            return a.commonName.localeCompare(b.commonName); // Alphabetical tie-breaker
+          });
+          break;
+        case 'least-encountered':
+          speciesList.sort((a, b) => {
+            const aCount = encounterCounts[a.speciesKey] || 0;
+            const bCount = encounterCounts[b.speciesKey] || 0;
+            if (aCount !== bCount) return aCount - bCount;
+            return a.commonName.localeCompare(b.commonName); // Alphabetical tie-breaker
+          });
+          break;
+      }
+
+      // Update results count
+      if (resultsContainer) {
+        if (totalSpeciesCount === 0) {
+          resultsContainer.innerHTML = '';
+        } else if (isFiltered) {
+          resultsContainer.innerHTML = `Showing ${filteredCount} of ${totalSpeciesCount} species<span class="clear-filters" onclick="clearFilters()">Clear filters</span>`;
+        } else {
+          resultsContainer.innerHTML = `${totalSpeciesCount} species`;
+        }
+      }
+
+      // Handle empty states
+      if (totalSpeciesCount === 0) {
+        // Truly empty collection
         container.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon">🌱</div>
             <h3>Your collection is empty!</h3>
             <p>Head outside and photograph something living to start your journey.</p>
             <button class="btn btn-primary" onclick="navigateTo('camera')">Open Camera</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (filteredCount === 0) {
+        // No matches for current filters
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <h3>No matching species</h3>
+            <p>Try adjusting your search or filters.</p>
+            <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
           </div>
         `;
         return;
@@ -2519,6 +2818,25 @@ Choose the single most characteristic type.`;
       if (typeFilter) {
         speciesFilter.type = typeFilter.value;
       }
+      const sortFilter = $('#sortFilter');
+      if (sortFilter) {
+        speciesFilter.sort = sortFilter.value;
+      }
+      saveFilterPreferences();
+      renderSpeciesIndex();
+    }
+
+    function clearFilters() {
+      speciesFilter.search = '';
+      speciesFilter.type = '';
+      // Keep sort preference when clearing filters
+      
+      const searchInput = $('#searchInput');
+      const typeFilter = $('#typeFilter');
+      if (searchInput) searchInput.value = '';
+      if (typeFilter) typeFilter.value = '';
+      
+      saveFilterPreferences();
       renderSpeciesIndex();
     }
 
@@ -2528,10 +2846,13 @@ Choose the single most characteristic type.`;
       const species = await DB.getSpecies(speciesKey);
       const encounters = await DB.getEncountersForSpecies(speciesKey);
 
+      // Collect unique varieties from encounters
+      const varieties = [...new Set(encounters.map(e => e.variety).filter(v => v))];
+
       const screen = $('#screen-detail');
       screen.innerHTML = `
         <header class="header">
-          <button class="header-back" onclick="navigateTo('index')">←</button>
+          <button class="header-back" onclick="goBack()">←</button>
           <span class="header-title">${species.commonName}</span>
           <div style="width: 40px;"></div>
         </header>
@@ -2556,6 +2877,14 @@ Choose the single most characteristic type.`;
             <div class="section-title">About</div>
             <p>${species.description}</p>
           </div>
+          ${varieties.length > 0 ? `
+            <div class="section">
+              <div class="section-title">Varieties Encountered</div>
+              <div class="varieties-list">
+                ${varieties.map(v => `<span class="variety-tag">${v}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
           ${species.funFacts && species.funFacts.length > 0 ? `
             <div class="section">
               <div class="section-title">Fun Facts</div>
@@ -2580,6 +2909,7 @@ Choose the single most characteristic type.`;
               <div class="encounter-item">
                 <img src="${e.photoUri}" class="encounter-thumb" alt="Encounter">
                 <div class="encounter-info">
+                  ${e.variety ? `<div class="encounter-variety">${e.variety}</div>` : ''}
                   <div class="encounter-location"><span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle;">location_on</span> ${e.locationName}</div>
                   <div class="encounter-date">${formatDateTime(e.timestamp)}</div>
                 </div>
@@ -2697,11 +3027,12 @@ Choose the single most characteristic type.`;
                 ${dayEncounters.map(e => {
                   const species = allSpecies[e.speciesKey] || {};
                   const badge = TYPE_BADGES[species.typeBadge] || TYPE_BADGES.mammal;
+                  const displayName = e.variety ? `${species.commonName || 'Unknown'} (${e.variety})` : (species.commonName || 'Unknown');
                   return `
                     <div class="timeline-entry" onclick="viewSpecies('${e.speciesKey}')">
                       <span>${badge.icon}</span>
                       <div style="flex: 1;">
-                        <div style="font-weight: 500; font-size: 14px;">${species.commonName || 'Unknown'}</div>
+                        <div style="font-weight: 500; font-size: 14px;">${displayName}</div>
                         <div style="font-size: 12px; color: var(--text-secondary);">
                           ${e.locationName} • ${formatTime(e.timestamp)}
                         </div>
@@ -2784,7 +3115,7 @@ Choose the single most characteristic type.`;
 
       screen.innerHTML = `
         <header class="header">
-          <button class="header-back" onclick="navigateTo('camera')">←</button>
+          <button class="header-back" onclick="goBack()">←</button>
           <span class="header-title">Settings</span>
           <div style="width: 40px;"></div>
         </header>
@@ -2798,7 +3129,7 @@ Choose the single most characteristic type.`;
                          ${settings.provider === key ? 'checked' : ''}
                          onchange="changeProvider('${key}')">
                   <span>
-                    ${provider.icon} ${provider.name}
+                    ${provider.name}
                     ${settings.apiKeys?.[key] ? '<span class="api-key-status valid">✓ Configured</span>' : ''}
                   </span>
                 </label>
@@ -2906,7 +3237,7 @@ Choose the single most characteristic type.`;
           <div class="modal">
             <div class="modal-handle"></div>
             <div class="modal-header">
-              <h2>${providerInfo.icon} ${providerInfo.name}</h2>
+              <h2>${providerInfo.name}</h2>
             </div>
             <div class="modal-body">
               <p style="color: var(--text-secondary); margin-bottom: 16px;">
@@ -3066,6 +3397,8 @@ Choose the single most characteristic type.`;
         $$('.nav-item')[navMap[screen]]?.classList.add('active');
       }
 
+      // Track previous screen before updating current
+      state.previousScreen = state.currentScreen;
       state.currentScreen = screen;
 
       // Render settings when navigating there
@@ -3082,6 +3415,18 @@ Choose the single most characteristic type.`;
       if (screen === 'journey' && state.journeyView === 'map') {
         renderJourney();
       }
+    }
+
+    function goBack() {
+      // Default fallback screens for each screen type
+      const fallbacks = {
+        'detail': 'index',
+        'settings': 'camera'
+      };
+      
+      // Use previous screen, or fallback if previous doesn't make sense
+      const target = state.previousScreen || fallbacks[state.currentScreen] || 'camera';
+      navigateTo(target);
     }
 
     // Initialize app
@@ -3101,6 +3446,29 @@ Choose the single most characteristic type.`;
         if (state.currentScreen === 'camera') {
           initCamera();
         }
+      }
+    });
+
+    // Global error handlers to prevent freezing
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      // Reset identifying state if an error occurs
+      if (state.isIdentifying) {
+        state.isIdentifying = false;
+        const overlay = $('#loadingOverlay');
+        if (overlay) overlay.classList.add('hidden');
+        showToast('An error occurred. Please try again.', 'error');
+      }
+      event.preventDefault();
+    });
+
+    window.addEventListener('error', (event) => {
+      console.error('Global error:', event.error);
+      // Reset identifying state if an error occurs
+      if (state.isIdentifying) {
+        state.isIdentifying = false;
+        const overlay = $('#loadingOverlay');
+        if (overlay) overlay.classList.add('hidden');
       }
     });
   </script>
