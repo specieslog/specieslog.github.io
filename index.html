@@ -782,13 +782,24 @@
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: center;
-      gap: 24px;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 16px;
       font-size: 13px;
       color: var(--text-secondary);
     }
 
     .journey-stats strong {
       color: var(--text-primary);
+    }
+
+    .journey-stats .rank-display {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .journey-stats .stats-divider {
+      color: var(--border);
     }
 
     /* Settings Screen */
@@ -1340,6 +1351,23 @@
       reptile: { icon: '🦎', label: 'Reptile' },
       mollusk: { icon: '🐚', label: 'Mollusk' },
       micro: { icon: '🔬', label: 'Micro' }
+    };
+
+    const RANKS = [
+      { threshold: 0, name: 'Curious Beginner' },
+      { threshold: 100, name: 'Backyard Wanderer' },
+      { threshold: 500, name: 'Trail Explorer' },
+      { threshold: 1500, name: 'Field Naturalist' },
+      { threshold: 3000, name: 'Wildlife Scholar' },
+      { threshold: 5000, name: 'Habitat Sage' },
+      { threshold: 8000, name: 'Master Naturalist' },
+      { threshold: 12000, name: 'Life Chronicler' }
+    ];
+
+    const POINTS = {
+      newSpecies: 100,
+      additionalEncounter: 10,
+      firstOfType: 50
     };
 
     const PROVIDERS = {
@@ -1928,6 +1956,43 @@ Choose the single most characteristic type.`;
       return `<span class="badge badge-${typeBadge}">${badge.icon} ${badge.label}</span>`;
     }
 
+    async function calculatePoints() {
+      const allSpecies = await DB.getAllSpecies();
+      const encounters = await DB.getEncounters();
+      
+      const speciesList = Object.values(allSpecies);
+      const speciesCount = speciesList.length;
+      const encounterCount = encounters.length;
+      
+      // Count unique types discovered
+      const typesDiscovered = new Set(speciesList.map(s => s.typeBadge));
+      
+      // Calculate points
+      let points = 0;
+      points += speciesCount * POINTS.newSpecies;  // 100 per species
+      points += (encounterCount - speciesCount) * POINTS.additionalEncounter;  // 10 per additional encounter
+      points += typesDiscovered.size * POINTS.firstOfType;  // 50 per unique type
+      
+      return points;
+    }
+
+    function getRank(points) {
+      let rank = RANKS[0];
+      for (const r of RANKS) {
+        if (points >= r.threshold) {
+          rank = r;
+        } else {
+          break;
+        }
+      }
+      return rank;
+    }
+
+    async function getCurrentRank() {
+      const points = await calculatePoints();
+      return getRank(points);
+    }
+
     function showToast(message, type = 'default') {
       const existing = $('.toast');
       if (existing) existing.remove();
@@ -2070,7 +2135,7 @@ Choose the single most characteristic type.`;
 
         <div class="screen" id="screen-journey">
           <header class="header">
-            <span class="header-title">Your Journey</span>
+            <span class="header-title">Journey</span>
             <div class="journey-toggle">
               <button class="${state.journeyView === 'timeline' ? 'active' : ''}" onclick="setJourneyView('timeline')"><span class="material-symbols-rounded">calendar_month</span></button>
               <button class="${state.journeyView === 'map' ? 'active' : ''}" onclick="setJourneyView('map')"><span class="material-symbols-rounded">map</span></button>
@@ -2502,6 +2567,9 @@ Choose the single most characteristic type.`;
           return;
         }
 
+        // Get rank before saving to check for rank-up
+        const rankBefore = await getCurrentRank();
+
         console.log('Saving encounter for:', result.commonName);
 
         // Compress image to reduce storage size
@@ -2552,6 +2620,10 @@ Choose the single most characteristic type.`;
         });
         console.log('Encounter saved:', encounter.id);
 
+        // Check for rank-up
+        const rankAfter = await getCurrentRank();
+        const didRankUp = rankAfter.threshold > rankBefore.threshold;
+
         closeModal('idResultModal');
         
         if (isNewSpecies) {
@@ -2559,6 +2631,13 @@ Choose the single most characteristic type.`;
           showToast(`New species discovered: ${result.commonName}!`, 'success');
         } else {
           showToast(`${result.commonName} added to your encounters!`, 'success');
+        }
+
+        // Show rank-up toast after delay (so it doesn't overlap with encounter toast)
+        if (didRankUp) {
+          setTimeout(() => {
+            showToast(`You've become a ${rankAfter.name} 🌿`, 'success');
+          }, 3500);
         }
 
         // Refresh data
@@ -2969,11 +3048,14 @@ Choose the single most characteristic type.`;
 
       const encounters = await DB.getEncounters();
       const stats = await DB.getStats();
+      const rank = await getCurrentRank();
 
       // Stats
       const locations = new Set(encounters.map(e => e.locationName)).size;
       if (statsEl) {
         statsEl.innerHTML = `
+          <span class="rank-display">${rank.name}</span>
+          <span class="stats-divider">•</span>
           <span><strong>${stats.totalSpecies}</strong> species</span>
           <span><strong>${stats.totalEncounters}</strong> encounters</span>
           <span><strong>${locations}</strong> locations</span>
