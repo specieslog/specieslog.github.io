@@ -1376,6 +1376,9 @@
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- ExifReader for GPS extraction from images (supports HEIC, JPEG, PNG, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/exifreader@4.23.5/dist/ExifReader.min.js"></script>
 
   <script>
     // ============================================
@@ -1951,6 +1954,32 @@ Choose the single most characteristic type.`;
       }
     }
 
+    // Extract GPS coordinates from image EXIF data using ExifReader library
+    // Supports HEIC, JPEG, PNG, WebP, TIFF, and other formats
+    async function extractGPSFromFile(file) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const tags = await ExifReader.load(arrayBuffer, { expanded: true });
+        
+        // Check for GPS data in the gps group
+        if (tags.gps && tags.gps.Latitude !== undefined && tags.gps.Longitude !== undefined) {
+          const lat = tags.gps.Latitude;
+          const lng = tags.gps.Longitude;
+          
+          // Validate coordinates are reasonable
+          if (typeof lat === 'number' && typeof lng === 'number' && 
+              lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            return { lat, lng };
+          }
+        }
+        
+        return null;
+      } catch (err) {
+        console.log('EXIF parsing error:', err.message);
+        return null;
+      }
+    }
+
     // ============================================
     // App State & Rendering
     // ============================================
@@ -1962,6 +1991,7 @@ Choose the single most characteristic type.`;
       isIdentifying: false,
       pendingImage: null,
       imageSource: null,  // 'capture' or 'upload'
+      uploadedImageLocation: null,  // GPS from EXIF for uploaded images
       identificationResult: null,
       journeyView: 'timeline',
       maps: {}
@@ -2504,7 +2534,7 @@ Choose the single most characteristic type.`;
       }
     }
 
-    function handleFileUpload(event) {
+    async function handleFileUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
       
@@ -2516,6 +2546,16 @@ Choose the single most characteristic type.`;
       }
 
       console.log('File uploaded:', file.name, file.size, 'bytes');
+
+      // Extract GPS from EXIF before reading image data
+      const exifLocation = await extractGPSFromFile(file);
+      if (exifLocation) {
+        console.log('EXIF GPS found:', exifLocation);
+        state.uploadedImageLocation = exifLocation;
+      } else {
+        console.log('No EXIF GPS data found');
+        state.uploadedImageLocation = null;
+      }
 
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -2721,7 +2761,14 @@ Choose the single most characteristic type.`;
         try {
           const settings = await DB.getSettings();
           if (settings.locationEnabled) {
-            location = await getCurrentLocation();
+            // For uploads, prefer EXIF location if available
+            if (state.imageSource === 'upload' && state.uploadedImageLocation) {
+              location = state.uploadedImageLocation;
+              console.log('Using EXIF location:', location);
+            } else {
+              location = await getCurrentLocation();
+              console.log('Using device location:', location);
+            }
             locationName = await reverseGeocode(location.lat, location.lng);
           }
         } catch (err) {
@@ -2836,6 +2883,7 @@ Choose the single most characteristic type.`;
       if (modalId === 'idResultModal') {
         state.pendingImage = null;
         state.imageSource = null;
+        state.uploadedImageLocation = null;
         state.identificationResult = null;
         // Resume camera feed (hides preview, restarts camera)
         resumeCameraFeed();
@@ -2880,6 +2928,7 @@ Choose the single most characteristic type.`;
       // Clear state
       state.pendingImage = null;
       state.imageSource = null;
+      state.uploadedImageLocation = null;
       state.identificationResult = null;
       state.errorImage = null;
       
