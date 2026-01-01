@@ -1962,14 +1962,24 @@ Choose the single most characteristic type.`;
         const tags = await ExifReader.load(arrayBuffer, { expanded: true });
         
         // Check for GPS data in the gps group
-        if (tags.gps && tags.gps.Latitude !== undefined && tags.gps.Longitude !== undefined) {
-          const lat = tags.gps.Latitude;
-          const lng = tags.gps.Longitude;
+        if (tags.gps) {
+          // ExifReader may return values as objects { value: number, description: string }
+          // or as plain numbers depending on the tag type
+          const latRaw = tags.gps.Latitude;
+          const lngRaw = tags.gps.Longitude;
           
-          // Validate coordinates are reasonable
-          if (typeof lat === 'number' && typeof lng === 'number' && 
-              lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-            return { lat, lng };
+          if (latRaw !== undefined && lngRaw !== undefined) {
+            // Extract numeric value whether it's a plain number or wrapped in an object
+            const lat = typeof latRaw === 'number' ? latRaw : latRaw?.value;
+            const lng = typeof lngRaw === 'number' ? lngRaw : lngRaw?.value;
+            
+            // Validate coordinates are reasonable numbers
+            if (typeof lat === 'number' && typeof lng === 'number' && 
+                !isNaN(lat) && !isNaN(lng) &&
+                lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+              console.log('EXIF GPS extracted:', { lat, lng });
+              return { lat, lng };
+            }
           }
         }
         
