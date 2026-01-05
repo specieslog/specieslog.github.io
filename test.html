@@ -1771,7 +1771,7 @@ Choose the single most characteristic type.`;
           signal: controller.signal,
           body: JSON.stringify({
             model: PROVIDERS.openai.model,
-            max_tokens: 4096,
+            max_completion_tokens: 4096,
             messages: [{
               role: 'user',
               content: [
@@ -1894,7 +1894,7 @@ Choose the single most characteristic type.`;
             },
             body: JSON.stringify({
               model: PROVIDERS.openai.model,
-              max_tokens: 50,
+              max_completion_tokens: 50,
               messages: [{ role: 'user', content: testPrompt }]
             })
           });
