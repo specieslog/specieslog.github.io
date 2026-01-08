@@ -6,6 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#2D5A3D">
+  <meta name="robots" content="noindex, nofollow">
   <title>SpeciesLog</title>
   
   <!-- Leaflet CSS -->
@@ -2825,8 +2826,9 @@ Choose the single most characteristic type.`;
       const link = document.createElement('a');
       link.href = imageBase64;
       
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+      // Generate filename with timestamp (using local time)
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
       if (speciesName) {
         // Sanitize species name for filename
         const safeName = speciesName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -3596,9 +3598,13 @@ Choose the single most characteristic type.`;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       
+      // Generate filename with local date
+      const now = new Date();
+      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      
       const a = document.createElement('a');
       a.href = url;
-      a.download = `specieslog-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `specieslog-export-${localDate}.json`;
       a.click();
       
       URL.revokeObjectURL(url);
@@ -3678,7 +3684,10 @@ Choose the single most characteristic type.`;
       $$('.nav-item').forEach(n => n.classList.remove('active'));
       const navMap = { camera: 0, index: 1, journey: 2 };
       if (navMap[screen] !== undefined) {
-        $$('.nav-item')[navMap[screen]]?.classList.add('active');
+        // Update nav in all bottom-navs so whichever screen is visible shows correct state
+        $$('.bottom-nav').forEach(nav => {
+          nav.children[navMap[screen]]?.classList.add('active');
+        });
       }
 
       // Track previous screen before updating current
