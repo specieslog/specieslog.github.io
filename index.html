@@ -6,6 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#2D5A3D">
+  <meta name="robots" content="noindex, nofollow">
   <title>SpeciesLog</title>
   
   <!-- Leaflet CSS -->
@@ -142,6 +143,9 @@
       padding: 8px;
       border-radius: 50%;
       transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .header-action:hover {
@@ -717,13 +721,16 @@
     }
 
     .journey-toggle button {
-      padding: 8px 12px;
+      padding: 9px 12px;
       border: none;
       background: none;
       cursor: pointer;
       opacity: 0.5;
       transition: opacity 0.2s;
       color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .journey-toggle button.active {
@@ -1961,6 +1968,7 @@ Choose the single most characteristic type.`;
       cameraStream: null,
       isIdentifying: false,
       pendingImage: null,
+      pendingImageHighRes: null,
       imageSource: null,  // 'capture' or 'upload'
       identificationResult: null,
       journeyView: 'timeline',
@@ -2395,8 +2403,8 @@ Choose the single most characteristic type.`;
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: state.cameraFacing || 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
           }
         });
         
@@ -2488,8 +2496,12 @@ Choose the single most characteristic type.`;
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0);
 
-        // Compress image
-        const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        // Capture high-res version for download
+        const highResImage = canvas.toDataURL('image/jpeg', 1.0);
+        state.pendingImageHighRes = highResImage;
+        
+        // Downscale to 720p for AI processing (max 1280px on longest side)
+        const imageBase64 = await compressImage(highResImage, 0.8, 1280);
         
         // Track image source for conditional download option
         state.imageSource = 'capture';
@@ -2609,7 +2621,7 @@ Choose the single most characteristic type.`;
             </div>
             ${state.imageSource === 'capture' ? `
             <div class="id-result-download">
-              <a href="#" onclick="event.preventDefault(); downloadImage(state.pendingImage, null)">
+              <a href="#" onclick="event.preventDefault(); downloadImage(state.pendingImageHighRes, null)">
                 <span class="material-symbols-rounded">download</span>
                 Download Photo
               </a>
@@ -2643,7 +2655,7 @@ Choose the single most characteristic type.`;
             </div>
             ${state.imageSource === 'capture' ? `
             <div class="id-result-download">
-              <a href="#" onclick="event.preventDefault(); downloadImage(state.pendingImage, '${result.commonName.replace(/'/g, "\\'")}')">
+              <a href="#" onclick="event.preventDefault(); downloadImage(state.pendingImageHighRes, '${result.commonName.replace(/'/g, "\\'")}')">
                 <span class="material-symbols-rounded">download</span>
                 Download Photo
               </a>
@@ -2814,8 +2826,9 @@ Choose the single most characteristic type.`;
       const link = document.createElement('a');
       link.href = imageBase64;
       
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+      // Generate filename with timestamp (using local time)
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
       if (speciesName) {
         // Sanitize species name for filename
         const safeName = speciesName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -2835,6 +2848,7 @@ Choose the single most characteristic type.`;
       // Clear pending image data when closing identification modal to free memory
       if (modalId === 'idResultModal') {
         state.pendingImage = null;
+        state.pendingImageHighRes = null;
         state.imageSource = null;
         state.identificationResult = null;
         // Resume camera feed (hides preview, restarts camera)
@@ -2858,7 +2872,7 @@ Choose the single most characteristic type.`;
           <p class="id-result-description">${errorMessage}</p>
           <div class="id-result-actions">
             ${showDownload ? `
-            <button class="btn btn-secondary" onclick="downloadImage(state.errorImage, null)">
+            <button class="btn btn-secondary" onclick="downloadImage(state.pendingImageHighRes, null)">
               <span class="material-symbols-rounded">download</span>
               Download
             </button>
@@ -2879,6 +2893,7 @@ Choose the single most characteristic type.`;
       
       // Clear state
       state.pendingImage = null;
+      state.pendingImageHighRes = null;
       state.imageSource = null;
       state.identificationResult = null;
       state.errorImage = null;
@@ -3583,9 +3598,13 @@ Choose the single most characteristic type.`;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       
+      // Generate filename with local date
+      const now = new Date();
+      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      
       const a = document.createElement('a');
       a.href = url;
-      a.download = `specieslog-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `specieslog-export-${localDate}.json`;
       a.click();
       
       URL.revokeObjectURL(url);
@@ -3665,7 +3684,10 @@ Choose the single most characteristic type.`;
       $$('.nav-item').forEach(n => n.classList.remove('active'));
       const navMap = { camera: 0, index: 1, journey: 2 };
       if (navMap[screen] !== undefined) {
-        $$('.nav-item')[navMap[screen]]?.classList.add('active');
+        // Update nav in all bottom-navs so whichever screen is visible shows correct state
+        $$('.bottom-nav').forEach(nav => {
+          nav.children[navMap[screen]]?.classList.add('active');
+        });
       }
 
       // Track previous screen before updating current
