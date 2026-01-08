@@ -1439,7 +1439,7 @@
       openai: {
         name: 'OpenAI',
         tagline: 'Reliable & popular',
-        model: 'gpt-5-nano',
+        model: 'gpt-4o-mini',
         endpoint: 'https://api.openai.com/v1/chat/completions',
         keyHelp: 'https://platform.openai.com/api-keys'
       }
@@ -1778,7 +1778,7 @@ Choose the single most characteristic type.`;
           signal: controller.signal,
           body: JSON.stringify({
             model: PROVIDERS.openai.model,
-            max_completion_tokens: 4096,
+            max_tokens: 4096,
             messages: [{
               role: 'user',
               content: [
@@ -1901,7 +1901,7 @@ Choose the single most characteristic type.`;
             },
             body: JSON.stringify({
               model: PROVIDERS.openai.model,
-              max_completion_tokens: 50,
+              max_tokens: 50,
               messages: [{ role: 'user', content: testPrompt }]
             })
           });
