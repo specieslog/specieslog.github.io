@@ -1,0 +1,3819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#2D5A3D">
+  <meta name="robots" content="noindex, nofollow">
+  <title>SpeciesLog</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #2D5A3D;
+      --primary-light: #3d7a52;
+      --primary-dark: #1e3d29;
+      --secondary: #8B7355;
+      --accent: #E8B954;
+      --background: #F5F2EB;
+      --surface: #FFFFFF;
+      --text-primary: #1A1A1A;
+      --text-secondary: #666666;
+      --text-tertiary: #999999;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --error: #E53935;
+      --border: #E0DDD6;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --safe-area-top: env(safe-area-inset-top, 0px);
+      --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* Material Icons */
+    .material-symbols-rounded {
+      font-family: 'Material Symbols Rounded';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+      font-feature-settings: 'liga';
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--background);
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    #app {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Typography */
+    h1, h2, h3 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 600;
+    }
+
+    .scientific-name {
+      font-style: italic;
+      color: var(--text-secondary);
+    }
+
+    /* Header */
+    .header {
+      background: var(--primary);
+      color: white;
+      padding: 14px 16px;
+      padding-top: calc(14px + var(--safe-area-top));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-logo {
+      height: 36px;
+      width: auto;
+      max-width: 180px;
+    }
+
+    .header-back {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    .header-action {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-action:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding-top: 2px;
+      padding-bottom: var(--safe-area-bottom);
+      flex-shrink: 0;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.2s;
+      gap: 5px;
+    }
+
+    .nav-item.active {
+      color: var(--primary);
+    }
+
+    .nav-item .icon {
+      font-size: 24px;
+    }
+
+    .nav-item .material-symbols-rounded {
+      font-size: 26px;
+    }
+
+    .nav-item .nav-icon {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      opacity: 0.6;
+    }
+
+    .nav-item.active .nav-icon {
+      opacity: 1;
+    }
+
+    /* Screens */
+    .screen {
+      display: none;
+      height: 100%;
+      flex-direction: column;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* Camera Screen */
+    .camera-container {
+      flex: 1;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+    }
+
+    #cameraVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #capturePreview {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      z-index: 1;
+    }
+
+    #capturePreview.active {
+      display: block;
+    }
+
+    .camera-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      pointer-events: none;
+    }
+
+    .camera-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      padding-bottom: calc(24px + var(--safe-area-bottom));
+      gap: 32px;
+      pointer-events: auto;
+    }
+
+    .capture-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: white;
+      border: 4px solid var(--primary);
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .capture-btn:active {
+      transform: scale(0.95);
+    }
+
+    .capture-btn-inner {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--primary);
+      transition: background 0.2s;
+    }
+
+    .capture-btn:hover .capture-btn-inner {
+      background: var(--primary-light);
+    }
+
+    .camera-secondary-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera-secondary-btn .material-symbols-rounded {
+      font-size: 24px;
+    }
+
+    .camera-hint {
+      text-align: center;
+      color: white;
+      padding: 16px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      font-size: 14px;
+    }
+
+    /* Upload Button */
+    .upload-input {
+      display: none;
+    }
+
+    /* Species List */
+    .species-list {
+      padding: 12px;
+    }
+
+    .species-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .species-card:active {
+      transform: scale(0.98);
+    }
+
+    .species-card-image {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--background);
+    }
+
+    .species-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .species-card-name {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .species-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* Type Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-bird { background: #E3F2FD; color: #1565C0; }
+    .badge-plant { background: #E8F5E9; color: #2E7D32; }
+    .badge-fish { background: #E0F7FA; color: #00838F; }
+    .badge-aquatic { background: #B2EBF2; color: #006064; }
+    .badge-bug { background: #FFF8E1; color: #F57F17; }
+    .badge-mammal { background: #EFEBE9; color: #5D4037; }
+    .badge-fungus { background: #F3E5F5; color: #7B1FA2; }
+    .badge-reptile { background: #FBE9E7; color: #D84315; }
+    .badge-amphibian { background: #E0F2F1; color: #00695C; }
+    .badge-mollusk { background: #FFF3E0; color: #EF6C00; }
+    .badge-micro { background: #E8EAF6; color: #3949AB; }
+
+    /* Search & Filter Bar */
+    .filter-bar {
+      background: var(--surface);
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-bar-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-input {
+      flex: 1;
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .filter-select {
+      flex: 1;
+      padding: 10px 36px 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    .filter-results {
+      background: var(--surface);
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-results:empty {
+      display: none;
+    }
+
+    .clear-filters {
+      color: var(--primary);
+      cursor: pointer;
+      margin-left: 8px;
+      text-decoration: underline;
+    }
+
+    /* Empty State */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      color: var(--primary);
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      max-width: 280px;
+      margin-bottom: 20px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.1s, background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-light);
+    }
+
+    .btn-secondary {
+      background: var(--background);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+    }
+
+    .btn-danger {
+      background: var(--error);
+      color: white;
+    }
+
+    .btn-block {
+      width: 100%;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Species Detail */
+    .species-detail {
+      padding-bottom: 80px;
+    }
+
+    .species-hero {
+      position: relative;
+      height: 280px;
+      background: var(--background);
+    }
+
+    .species-hero-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .species-hero-gallery {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      background: var(--surface);
+    }
+
+    .species-hero-thumb {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      flex-shrink: 0;
+    }
+
+    .species-hero-thumb.active {
+      border-color: var(--primary);
+    }
+
+    .species-info {
+      padding: 20px;
+      background: var(--surface);
+    }
+
+    .species-info h1 {
+      font-size: 26px;
+      margin-bottom: 4px;
+    }
+
+    .species-info .scientific-name {
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .section {
+      padding: 20px;
+      border-top: 8px solid var(--background);
+    }
+
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .section p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-primary);
+    }
+
+    .fun-facts-list {
+      list-style: none;
+    }
+
+    .fun-facts-list li {
+      padding: 10px 0;
+      padding-left: 28px;
+      position: relative;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .fun-facts-list li:last-child {
+      border-bottom: none;
+    }
+
+    .fun-facts-list li::before {
+      content: "✦";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+
+    .encounter-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .encounter-item:last-child {
+      border-bottom: none;
+    }
+
+    .encounter-thumb {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .encounter-info {
+      flex: 1;
+    }
+
+    .encounter-location {
+      font-weight: 500;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .encounter-date {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .encounter-variety {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary);
+      margin-bottom: 2px;
+    }
+
+    .varieties-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .variety-tag {
+      display: inline-block;
+      padding: 6px 12px;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      font-size: 13px;
+      color: var(--text-primary);
+    }
+
+    .mini-map {
+      height: 200px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* Journey Screen */
+    .journey-toggle {
+      display: flex;
+      gap: 8px;
+    }
+
+    .journey-toggle button {
+      padding: 9px 12px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .journey-toggle button.active {
+      opacity: 1;
+    }
+
+    .journey-toggle .material-symbols-rounded {
+      font-size: 22px;
+    }
+
+    .journey-timeline {
+      padding: 16px;
+    }
+
+    .timeline-month {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 20px 0 12px;
+    }
+
+    .timeline-month:first-child {
+      margin-top: 0;
+    }
+
+    .timeline-day {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .timeline-date {
+      width: 50px;
+      text-align: right;
+      font-size: 13px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .timeline-entries {
+      flex: 1;
+      border-left: 2px solid var(--border);
+      padding-left: 16px;
+    }
+
+    .timeline-entry {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: 0 1px 3px var(--shadow);
+    }
+
+    .timeline-entry:last-child {
+      margin-bottom: 0;
+    }
+
+    .full-map {
+      height: 100%;
+    }
+
+    .journey-stats {
+      background: var(--surface);
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .journey-stats strong {
+      color: var(--text-primary);
+    }
+
+    .journey-stats .rank-display {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .journey-stats .stats-divider {
+      color: var(--border);
+    }
+
+    /* Settings Screen */
+    .settings-section {
+      background: var(--surface);
+      margin: 16px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .settings-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      padding: 16px 16px 8px;
+      font-weight: 600;
+    }
+
+    .settings-item {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .settings-item:last-child {
+      border-bottom: none;
+    }
+
+    .settings-item-label {
+      font-size: 15px;
+    }
+
+    .settings-item-sublabel {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .settings-item-value {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .radio-option:last-child {
+      border-bottom: none;
+    }
+
+    .radio-option input {
+      margin-right: 12px;
+      accent-color: var(--primary);
+      width: 18px;
+      height: 18px;
+    }
+
+    .api-key-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .api-key-status.valid {
+      color: var(--success);
+    }
+
+    .api-key-status.invalid {
+      color: var(--error);
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s ease-out;
+      padding-bottom: var(--safe-area-bottom);
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0);
+    }
+
+    .modal-handle {
+      width: 40px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto;
+    }
+
+    .modal-header {
+      padding: 8px 20px 16px;
+      text-align: center;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+    }
+
+    .modal-body {
+      padding: 0 20px 24px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    /* Identification Result */
+    .id-result {
+      padding: 24px;
+    }
+
+    .id-result-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .id-result h2 {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .id-result-variety {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+
+    .id-result .scientific-name {
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .id-result-description {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      margin: 16px 0;
+    }
+
+    .id-result-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .id-result-actions .btn {
+      flex: 1;
+    }
+
+    .id-result-download {
+      text-align: center;
+      margin-top: 16px;
+    }
+
+    .id-result-download a {
+      color: var(--primary);
+      font-size: 14px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      transition: background 0.2s;
+    }
+
+    .id-result-download a:hover {
+      background: var(--background);
+    }
+
+    .id-result-download .material-symbols-rounded {
+      font-size: 18px;
+    }
+
+    .confidence-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    .confidence-high {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+
+    .confidence-medium {
+      background: #FFF8E1;
+      color: #F57F17;
+    }
+
+    .confidence-low {
+      background: #FCE4EC;
+      color: #C2185B;
+    }
+
+    /* Loading States */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 50;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    /* Onboarding */
+    .onboarding {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+    }
+
+    .onboarding-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
+    }
+
+    .onboarding-icon {
+      font-size: 80px;
+      margin-bottom: 24px;
+    }
+
+    .onboarding-logo {
+      width: auto;
+      height: auto;
+      max-width: 260px;
+      max-height: 100px;
+      margin-bottom: 24px;
+      object-fit: contain;
+    }
+
+    .onboarding h1 {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .onboarding p {
+      font-size: 16px;
+      opacity: 0.9;
+      max-width: 300px;
+      line-height: 1.6;
+    }
+
+    .onboarding-actions {
+      padding: 24px;
+      padding-bottom: calc(24px + var(--safe-area-bottom));
+    }
+
+    .onboarding .btn {
+      background: white;
+      color: var(--primary);
+    }
+
+    .provider-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+      margin-top: 24px;
+    }
+
+    .provider-card {
+      background: rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 16px;
+      padding: 16px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      text-align: left;
+    }
+
+    .provider-card:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .provider-card.selected {
+      background: rgba(255,255,255,0.25);
+      border-color: white;
+    }
+
+    .provider-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .provider-card-desc {
+      font-size: 13px;
+      opacity: 0.8;
+    }
+
+    .api-key-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 12px;
+      font-size: 14px;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      margin-top: 20px;
+      outline: none;
+    }
+
+    .api-key-input::placeholder {
+      color: rgba(255,255,255,0.5);
+    }
+
+    .api-key-input:focus {
+      border-color: white;
+    }
+
+    .api-key-help {
+      margin-top: 16px;
+      font-size: 13px;
+      opacity: 0.8;
+    }
+
+    .api-key-help a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    .onboarding-steps {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+    }
+
+    .step-dot.active {
+      background: white;
+    }
+
+    .skip-link {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      text-decoration: underline;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+
+    /* Toast Notifications */
+    .toast {
+      position: fixed;
+      bottom: calc(80px + var(--safe-area-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text-primary);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 2000;
+      opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      max-width: calc(100% - 32px);
+      text-align: center;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success {
+      background: var(--success);
+    }
+
+    .toast.error {
+      background: var(--error);
+    }
+
+    /* Confetti */
+    .confetti-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3000;
+      overflow: hidden;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      opacity: 0;
+    }
+
+    @keyframes confetti-fall {
+      0% {
+        transform: translateY(-100px) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    /* Taxonomy Table */
+    .taxonomy-table {
+      width: 100%;
+      font-size: 14px;
+    }
+
+    .taxonomy-table tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .taxonomy-table tr:last-child {
+      border-bottom: none;
+    }
+
+    .taxonomy-table td {
+      padding: 8px 0;
+    }
+
+    .taxonomy-table td:first-child {
+      color: var(--text-secondary);
+      text-transform: capitalize;
+      width: 80px;
+    }
+
+    /* Utilities */
+    .hidden {
+      display: none !important;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .mt-20 { margin-top: 20px; }
+    .mb-12 { margin-bottom: 12px; }
+    .mb-16 { margin-bottom: 16px; }
+
+    /* Leaflet Fixes */
+    .leaflet-container {
+      font-family: inherit;
+    }
+
+    .leaflet-attribution-flag {
+      display: none !important;
+    }
+
+    /* Responsive */
+    @media (min-width: 768px) {
+      .modal {
+        border-radius: 20px;
+        margin: auto;
+        max-height: 80vh;
+      }
+
+      .modal-overlay {
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // ============================================
+    // SPECIESLOG - Species Collection App
+    // ============================================
+
+    // Constants
+    const TYPE_BADGES = {
+      bug: { icon: '🐛', label: 'Bug' },
+      bird: { icon: '🐦', label: 'Bird' },
+      fish: { icon: '🐟', label: 'Fish' },
+      aquatic: { icon: '🌊', label: 'Aquatic' },
+      plant: { icon: '🌿', label: 'Plant' },
+      fungus: { icon: '🍄', label: 'Fungus' },
+      mammal: { icon: '🐾', label: 'Mammal' },
+      amphibian: { icon: '🐸', label: 'Amphibian' },
+      reptile: { icon: '🦎', label: 'Reptile' },
+      mollusk: { icon: '🐚', label: 'Mollusk' },
+      micro: { icon: '🔬', label: 'Micro' }
+    };
+
+    const RANKS = [
+      { threshold: 0, name: 'Curious Beginner' },
+      { threshold: 100, name: 'Backyard Wanderer' },
+      { threshold: 500, name: 'Trail Explorer' },
+      { threshold: 1500, name: 'Field Naturalist' },
+      { threshold: 3000, name: 'Wildlife Scholar' },
+      { threshold: 5000, name: 'Habitat Sage' },
+      { threshold: 8000, name: 'Master Naturalist' },
+      { threshold: 12000, name: 'Life Chronicler' }
+    ];
+
+    const POINTS = {
+      newSpecies: 100,
+      additionalEncounter: 10,
+      firstOfType: 50
+    };
+
+    const PROVIDERS = {
+      gemini: {
+        name: 'Google Gemini',
+        tagline: 'Fast & free tier',
+        model: 'gemini-3-flash-preview',
+        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent',
+        keyHelp: 'https://aistudio.google.com/apikey'
+      },
+      claude: {
+        name: 'Anthropic Claude',
+        tagline: 'Detailed descriptions',
+        model: 'claude-sonnet-4-5-20250514',
+        endpoint: 'https://api.anthropic.com/v1/messages',
+        keyHelp: 'https://console.anthropic.com/settings/keys'
+      },
+      openai: {
+        name: 'OpenAI',
+        tagline: 'Reliable & popular',
+        model: 'gpt-4o-mini',
+        endpoint: 'https://api.openai.com/v1/chat/completions',
+        keyHelp: 'https://platform.openai.com/api-keys'
+      }
+    };
+
+    const IDENTIFICATION_PROMPT = `You are a naturalist expert helping identify species from photographs.
+
+Analyze this image and identify the species shown. Provide your response as valid JSON only, with no additional text or markdown.
+
+Response format:
+{
+  "identified": true,
+  "confidence": "high" | "medium" | "low",
+  "commonName": "Common name of the species (general, e.g., 'Apple' not 'Fuji Apple')",
+  "scientificName": "Genus species",
+  "variety": "Specific variety, cultivar, breed, or subspecies if identifiable (e.g., 'Fuji' for a Fuji apple, 'Holstein' for a Holstein cow, 'Mallard' for a Mallard duck), or null if not applicable or identifiable",
+  "taxonomy": {
+    "kingdom": "e.g., Animalia",
+    "phylum": "e.g., Arthropoda",
+    "class": "e.g., Insecta",
+    "order": "e.g., Lepidoptera",
+    "family": "e.g., Nymphalidae",
+    "genus": "e.g., Danaus"
+  },
+  "typeBadge": "one of: bug, bird, fish, aquatic, plant, fungus, mammal, amphibian, reptile, mollusk, micro",
+  "description": "2-3 engaging sentences about this species in general for a general audience (not specific to the variety shown)",
+  "funFacts": ["Interesting fact 1", "Interesting fact 2", "Interesting fact 3"]
+}
+
+If you cannot identify the species, return:
+{
+  "identified": false,
+  "confidence": "low",
+  "bestGuess": "Your best guess if any",
+  "reason": "Why identification was difficult"
+}
+
+Type badge guidelines:
+- bug: insects, arachnids, myriapods (including butterflies, beetles, spiders)
+- bird: all birds
+- fish: fish (freshwater and saltwater)
+- aquatic: marine mammals, aquatic invertebrates, other water-dwelling creatures that aren't fish
+- plant: plants, trees, flowers, ferns, mosses
+- fungus: mushrooms, molds, lichens
+- mammal: land mammals, bats
+- amphibian: frogs, salamanders, newts
+- reptile: snakes, lizards, turtles, crocodilians
+- mollusk: snails, slugs, clams, octopi, squid
+- micro: protozoa, microscopic organisms
+
+Choose the single most characteristic type.`;
+
+    // ============================================
+    // Database Layer
+    // ============================================
+    const DB = {
+      async get(key) {
+        try {
+          const data = localStorage.getItem(`specieslog_${key}`);
+          return data ? JSON.parse(data) : null;
+        } catch (err) {
+          console.error('DB get error:', key, err);
+          return null;
+        }
+      },
+
+      async set(key, value) {
+        try {
+          localStorage.setItem(`specieslog_${key}`, JSON.stringify(value));
+          return true;
+        } catch (err) {
+          console.error('DB set error:', key, err);
+          // Handle quota exceeded
+          if (err.name === 'QuotaExceededError' || err.code === 22) {
+            throw new Error('Storage full. Try clearing some old data in Settings.');
+          }
+          throw err;
+        }
+      },
+
+      normalizeSpeciesKey(scientificName) {
+        // Extract only genus + species (first two words) for consistent keying
+        // This handles cases where LLMs return author citations like "Vulpes vulpes Linnaeus, 1758"
+        const parts = scientificName.trim().split(/\s+/);
+        
+        // Normalize genus-level identifications to consistent format
+        // "Juniperus" → "Juniperus sp."
+        // "Juniperus species" → "Juniperus sp."
+        // "Juniperus sp." → "Juniperus sp."
+        let binomial;
+        if (parts.length === 1) {
+          binomial = `${parts[0]} sp.`;
+        } else if (parts[1].toLowerCase() === 'species') {
+          binomial = `${parts[0]} sp.`;
+        } else {
+          binomial = parts.slice(0, 2).join(' ');
+        }
+        
+        return binomial.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      },
+
+      normalizeScientificName(scientificName) {
+        // Normalize scientific name for consistent display
+        // "Juniperus" → "Juniperus sp."
+        // "Juniperus species" → "Juniperus sp."
+        // "Vulpes vulpes Linnaeus, 1758" → "Vulpes vulpes"
+        const parts = scientificName.trim().split(/\s+/);
+        
+        if (parts.length === 1) {
+          return `${parts[0]} sp.`;
+        } else if (parts[1].toLowerCase() === 'species') {
+          return `${parts[0]} sp.`;
+        } else {
+          return parts.slice(0, 2).join(' ');
+        }
+      },
+
+      async getSpecies(speciesKey) {
+        const species = await this.get('species') || {};
+        return species[speciesKey];
+      },
+
+      async getAllSpecies() {
+        return await this.get('species') || {};
+      },
+
+      async saveSpecies(entry) {
+        const species = await this.get('species') || {};
+        const speciesKey = this.normalizeSpeciesKey(entry.scientificName);
+        species[speciesKey] = {
+          ...entry,
+          scientificName: this.normalizeScientificName(entry.scientificName),
+          speciesKey,
+          cachedAt: new Date().toISOString()
+        };
+        await this.set('species', species);
+        await this.updateStats();
+        return speciesKey;
+      },
+
+      async getEncounters() {
+        return await this.get('encounters') || [];
+      },
+
+      async addEncounter(encounter) {
+        console.log('DB.addEncounter called with speciesKey:', encounter.speciesKey);
+        const encounters = await this.get('encounters') || [];
+        const newEncounter = {
+          ...encounter,
+          id: crypto.randomUUID(),
+          timestamp: new Date().toISOString()
+        };
+        encounters.unshift(newEncounter);
+        console.log('Total encounters now:', encounters.length);
+        await this.set('encounters', encounters);
+        console.log('Encounters saved to localStorage');
+        await this.updateStats();
+        console.log('Stats updated');
+        return newEncounter;
+      },
+
+      async getEncountersForSpecies(speciesKey) {
+        const encounters = await this.get('encounters') || [];
+        return encounters.filter(e => e.speciesKey === speciesKey);
+      },
+
+      async getSettings() {
+        return await this.get('settings') || {
+          provider: null,
+          apiKeys: {},
+          photoQuality: 'high',
+          locationEnabled: true
+        };
+      },
+
+      async saveSettings(settings) {
+        await this.set('settings', settings);
+      },
+
+      async getStats() {
+        return await this.get('stats') || {
+          totalSpecies: 0,
+          totalEncounters: 0,
+          apiCallsMade: 0
+        };
+      },
+
+      async updateStats() {
+        const species = await this.get('species') || {};
+        const encounters = await this.get('encounters') || [];
+        const currentStats = await this.getStats();
+        
+        await this.set('stats', {
+          ...currentStats,
+          totalSpecies: Object.keys(species).length,
+          totalEncounters: encounters.length
+        });
+      },
+
+      async incrementApiCalls() {
+        const stats = await this.getStats();
+        stats.apiCallsMade = (stats.apiCallsMade || 0) + 1;
+        await this.set('stats', stats);
+      },
+
+      async exportAll() {
+        const settings = await this.getSettings();
+        const { apiKeys, ...safeSettings } = settings;
+        return {
+          exportVersion: '1.0',
+          exportDate: new Date().toISOString(),
+          species: await this.get('species'),
+          encounters: await this.get('encounters'),
+          stats: await this.getStats(),
+          settings: safeSettings
+        };
+      },
+
+      async clearAll() {
+        localStorage.removeItem('specieslog_species');
+        localStorage.removeItem('specieslog_encounters');
+        localStorage.removeItem('specieslog_stats');
+      }
+    };
+
+    // ============================================
+    // API Integration
+    // ============================================
+    async function identifyWithGemini(imageBase64, apiKey) {
+      const endpoint = `${PROVIDERS.gemini.endpoint}?key=${apiKey}`;
+      
+      console.log('Calling Gemini API...');
+      
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: IDENTIFICATION_PROMPT },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+                  }
+                }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 4096
+            }
+          })
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Gemini API error:', response.status, errorData);
+          throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+
+        const data = await response.json();
+        console.log('Gemini response received');
+        
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          console.error('No text in Gemini response:', data);
+          throw new Error('No response from Gemini');
+        }
+        
+        return parseJSONResponse(text);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          throw new Error('Gemini request timed out. Please try again.');
+        }
+        throw err;
+      }
+    }
+
+    async function identifyWithClaude(imageBase64, apiKey) {
+      console.log('Calling Claude API...');
+      
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      try {
+        const response = await fetch(PROVIDERS.claude.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: PROVIDERS.claude.model,
+            max_tokens: 4096,
+            messages: [{
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: 'image/jpeg',
+                    data: imageBase64.replace(/^data:image\/\w+;base64,/, '')
+                  }
+                },
+                { type: 'text', text: IDENTIFICATION_PROMPT }
+              ]
+            }]
+          })
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Claude API error:', response.status, errorData);
+          throw new Error(`Claude API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+
+        const data = await response.json();
+        console.log('Claude response received');
+        
+        const text = data.content?.[0]?.text;
+        if (!text) {
+          console.error('No text in Claude response:', data);
+          throw new Error('No response from Claude');
+        }
+        
+        return parseJSONResponse(text);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          throw new Error('Claude request timed out. Please try again.');
+        }
+        throw err;
+      }
+    }
+
+    async function identifyWithOpenAI(imageBase64, apiKey) {
+      console.log('Calling OpenAI API...');
+      
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      try {
+        const response = await fetch(PROVIDERS.openai.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model: PROVIDERS.openai.model,
+            max_tokens: 4096,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: IDENTIFICATION_PROMPT },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageBase64,
+                    detail: 'high'
+                  }
+                }
+              ]
+            }]
+          })
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('OpenAI API error:', response.status, errorData);
+          throw new Error(`OpenAI API error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+
+        const data = await response.json();
+        console.log('OpenAI response received');
+        
+        const text = data.choices?.[0]?.message?.content;
+        if (!text) {
+          console.error('No text in OpenAI response:', data);
+          throw new Error('No response from OpenAI');
+        }
+        
+        return parseJSONResponse(text);
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+          throw new Error('OpenAI request timed out. Please try again.');
+        }
+        throw err;
+      }
+    }
+
+    function parseJSONResponse(text) {
+      if (!text) throw new Error('Empty response');
+      let cleaned = text.trim();
+      if (cleaned.startsWith('```json')) {
+        cleaned = cleaned.slice(7);
+      } else if (cleaned.startsWith('```')) {
+        cleaned = cleaned.slice(3);
+      }
+      if (cleaned.endsWith('```')) {
+        cleaned = cleaned.slice(0, -3);
+      }
+      return JSON.parse(cleaned.trim());
+    }
+
+    async function identifySpecies(imageBase64) {
+      const settings = await DB.getSettings();
+      const provider = settings?.provider;
+      const apiKey = settings?.apiKeys?.[provider];
+
+      if (!apiKey) {
+        throw new Error('NO_API_KEY');
+      }
+
+      await DB.incrementApiCalls();
+
+      const identifyFn = {
+        gemini: identifyWithGemini,
+        claude: identifyWithClaude,
+        openai: identifyWithOpenAI
+      }[provider];
+
+      return await identifyFn(imageBase64, apiKey);
+    }
+
+    async function validateApiKey(provider, apiKey) {
+      try {
+        const testPrompt = 'Say "ok"';
+        let response;
+
+        if (provider === 'gemini') {
+          // Use the models endpoint to list models as a simple validation
+          response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+            { method: 'GET' }
+          );
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Gemini validation error:', response.status, errorData);
+          }
+        } else if (provider === 'claude') {
+          response = await fetch(PROVIDERS.claude.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: PROVIDERS.claude.model,
+              max_tokens: 50,
+              messages: [{ role: 'user', content: testPrompt }]
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Claude validation error:', response.status, errorData);
+          }
+        } else if (provider === 'openai') {
+          response = await fetch(PROVIDERS.openai.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: PROVIDERS.openai.model,
+              max_tokens: 50,
+              messages: [{ role: 'user', content: testPrompt }]
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('OpenAI validation error:', response.status, errorData);
+          }
+        }
+
+        console.log('API validation response status:', response.status);
+        return response.ok;
+      } catch (err) {
+        console.error('API validation exception:', err);
+        return false;
+      }
+    }
+
+    // ============================================
+    // Geolocation
+    // ============================================
+    async function getCurrentLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('Geolocation not supported'));
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          }),
+          err => reject(err),
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      });
+    }
+
+    async function reverseGeocode(lat, lng) {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+          { headers: { 'User-Agent': 'SpeciesLog/1.0' } }
+        );
+        const data = await response.json();
+        return data.address?.suburb ||
+               data.address?.neighbourhood ||
+               data.address?.city ||
+               data.address?.town ||
+               data.display_name?.split(',')[0] ||
+               'Unknown location';
+      } catch {
+        return 'Unknown location';
+      }
+    }
+
+    // ============================================
+    // App State & Rendering
+    // ============================================
+    let state = {
+      currentScreen: 'camera',
+      previousScreen: 'camera',
+      selectedSpecies: null,
+      cameraStream: null,
+      isIdentifying: false,
+      pendingImage: null,
+      pendingImageHighRes: null,
+      imageSource: null,  // 'capture' or 'upload'
+      identificationResult: null,
+      journeyView: 'timeline',
+      maps: {}
+    };
+
+    function $(selector) {
+      return document.querySelector(selector);
+    }
+
+    function $$(selector) {
+      return document.querySelectorAll(selector);
+    }
+
+    function formatDate(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+
+    function formatTime(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    }
+
+    function formatDateTime(isoString) {
+      return `${formatDate(isoString)} • ${formatTime(isoString)}`;
+    }
+
+    function getBadgeHTML(typeBadge) {
+      const badge = TYPE_BADGES[typeBadge] || TYPE_BADGES.mammal;
+      return `<span class="badge badge-${typeBadge}">${badge.icon} ${badge.label}</span>`;
+    }
+
+    async function calculatePoints() {
+      const allSpecies = await DB.getAllSpecies();
+      const encounters = await DB.getEncounters();
+      
+      const speciesList = Object.values(allSpecies);
+      const speciesCount = speciesList.length;
+      const encounterCount = encounters.length;
+      
+      // Count unique types discovered
+      const typesDiscovered = new Set(speciesList.map(s => s.typeBadge));
+      
+      // Calculate points
+      let points = 0;
+      points += speciesCount * POINTS.newSpecies;  // 100 per species
+      points += (encounterCount - speciesCount) * POINTS.additionalEncounter;  // 10 per additional encounter
+      points += typesDiscovered.size * POINTS.firstOfType;  // 50 per unique type
+      
+      return points;
+    }
+
+    function getRank(points) {
+      let rank = RANKS[0];
+      for (const r of RANKS) {
+        if (points >= r.threshold) {
+          rank = r;
+        } else {
+          break;
+        }
+      }
+      return rank;
+    }
+
+    async function getCurrentRank() {
+      const points = await calculatePoints();
+      return getRank(points);
+    }
+
+    // Toast queue system
+    const toastQueue = [];
+    let isShowingToast = false;
+
+    function showToast(message, type = 'default') {
+      toastQueue.push({ message, type });
+      processToastQueue();
+    }
+
+    function processToastQueue() {
+      if (isShowingToast || toastQueue.length === 0) return;
+      
+      isShowingToast = true;
+      const { message, type } = toastQueue.shift();
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.add('show');
+      });
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+          toast.remove();
+          isShowingToast = false;
+          processToastQueue(); // Process next toast in queue
+        }, 300);
+      }, 3000);
+    }
+
+    function showConfetti() {
+      const container = document.createElement('div');
+      container.className = 'confetti-container';
+      document.body.appendChild(container);
+
+      const colors = ['#E8B954', '#2D5A3D', '#4CAF50', '#FF9800', '#E53935', '#9C27B0'];
+
+      for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animation = `confetti-fall ${1.5 + Math.random()}s ease-out forwards`;
+        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+        container.appendChild(confetti);
+      }
+
+      setTimeout(() => container.remove(), 3000);
+    }
+
+    // ============================================
+    // Screen Renderers
+    // ============================================
+    async function renderApp() {
+      const settings = await DB.getSettings();
+      
+      // Check if onboarding needed
+      if (!settings.provider || !settings.apiKeys?.[settings.provider]) {
+        renderOnboarding();
+        return;
+      }
+
+      const app = $('#app');
+      app.innerHTML = `
+        <div class="screen active" id="screen-camera">
+          <header class="header">
+            <img src="logo.png" alt="SpeciesLog" class="header-logo">
+            <button class="header-action" onclick="navigateTo('settings')"><span class="material-symbols-rounded">settings</span></button>
+          </header>
+          <div class="camera-container">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <img id="capturePreview" alt="Captured image">
+            <div id="loadingOverlay" class="loading-overlay hidden">
+              <div class="spinner"></div>
+              <div class="loading-text">Identifying...</div>
+            </div>
+            <div class="camera-overlay">
+              <div class="camera-hint">Point at any living thing and capture</div>
+              <div class="camera-controls">
+                <label class="camera-secondary-btn" title="Upload photo">
+                  <span class="material-symbols-rounded">folder_open</span>
+                  <input type="file" accept="image/*" class="upload-input" onchange="handleFileUpload(event)">
+                </label>
+                <button class="capture-btn" onclick="capturePhoto()">
+                  <div class="capture-btn-inner"></div>
+                </button>
+                <button class="camera-secondary-btn" onclick="switchCamera()" title="Switch camera"><span class="material-symbols-rounded">flip_camera_android</span></button>
+              </div>
+            </div>
+          </div>
+          <nav class="bottom-nav">
+            <button class="nav-item active" onclick="navigateTo('camera')">
+              <img src="capture.png" alt="" class="nav-icon">
+              <span>Capture</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('index')">
+              <img src="index.png" alt="" class="nav-icon">
+              <span>Discoveries</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('journey')">
+              <img src="journey.png" alt="" class="nav-icon">
+              <span>Journey</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="screen" id="screen-index">
+          <header class="header">
+            <span class="header-title">Discoveries</span>
+            <button class="header-action" onclick="navigateTo('settings')"><span class="material-symbols-rounded">settings</span></button>
+          </header>
+          <div class="filter-bar">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search species..." oninput="filterSpecies(this.value)">
+            <div class="filter-bar-row">
+              <select class="filter-select" id="typeFilter" onchange="filterSpecies()">
+                <option value="">All Types</option>
+                ${Object.entries(TYPE_BADGES).map(([key, val]) => 
+                  `<option value="${key}">${val.icon} ${val.label}</option>`
+                ).join('')}
+              </select>
+              <select class="filter-select" id="sortFilter" onchange="filterSpecies()">
+                <option value="recent-seen">Recently Seen</option>
+                <option value="oldest-seen">Oldest Seen</option>
+                <option value="recent-added">Recently Added</option>
+                <option value="first-added">First Added</option>
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="name-desc">Name (Z-A)</option>
+                <option value="most-encountered">Most Encountered</option>
+                <option value="least-encountered">Least Encountered</option>
+              </select>
+            </div>
+          </div>
+          <div class="filter-results" id="filterResults"></div>
+          <div class="main-content" id="speciesList"></div>
+          <nav class="bottom-nav">
+            <button class="nav-item" onclick="navigateTo('camera')">
+              <img src="capture.png" alt="" class="nav-icon">
+              <span>Capture</span>
+            </button>
+            <button class="nav-item active" onclick="navigateTo('index')">
+              <img src="index.png" alt="" class="nav-icon">
+              <span>Discoveries</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('journey')">
+              <img src="journey.png" alt="" class="nav-icon">
+              <span>Journey</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="screen" id="screen-detail"></div>
+
+        <div class="screen" id="screen-journey">
+          <header class="header">
+            <span class="header-title">Journey</span>
+            <div class="journey-toggle">
+              <button class="${state.journeyView === 'timeline' ? 'active' : ''}" onclick="setJourneyView('timeline')"><span class="material-symbols-rounded">calendar_month</span></button>
+              <button class="${state.journeyView === 'map' ? 'active' : ''}" onclick="setJourneyView('map')"><span class="material-symbols-rounded">map</span></button>
+            </div>
+          </header>
+          <div class="main-content" id="journeyContent"></div>
+          <div class="journey-stats" id="journeyStats"></div>
+          <nav class="bottom-nav">
+            <button class="nav-item" onclick="navigateTo('camera')">
+              <img src="capture.png" alt="" class="nav-icon">
+              <span>Capture</span>
+            </button>
+            <button class="nav-item" onclick="navigateTo('index')">
+              <img src="index.png" alt="" class="nav-icon">
+              <span>Discoveries</span>
+            </button>
+            <button class="nav-item active" onclick="navigateTo('journey')">
+              <img src="journey.png" alt="" class="nav-icon">
+              <span>Journey</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="screen" id="screen-settings"></div>
+
+        <div class="modal-overlay" id="idResultModal">
+          <div class="modal">
+            <div class="modal-handle"></div>
+            <div id="idResultContent"></div>
+          </div>
+        </div>
+      `;
+
+      // Initialize camera
+      initCamera();
+      
+      // Load filter preferences and apply to dropdowns
+      await loadFilterPreferences();
+      const typeFilter = $('#typeFilter');
+      const sortFilter = $('#sortFilter');
+      if (typeFilter) typeFilter.value = speciesFilter.type;
+      if (sortFilter) sortFilter.value = speciesFilter.sort;
+      
+      // Load initial data
+      renderSpeciesIndex();
+      renderJourney();
+    }
+
+    // Onboarding
+    let onboardingState = {
+      step: 0,
+      selectedProvider: null,
+      apiKey: ''
+    };
+
+    function renderOnboarding() {
+      const app = $('#app');
+      
+      if (onboardingState.step === 0) {
+        app.innerHTML = `
+          <div class="onboarding">
+            <div class="onboarding-content">
+              <div class="onboarding-steps">
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+              </div>
+              <img src="logo.png" alt="SpeciesLog" class="onboarding-logo">
+              <p>Discover and collect every species you encounter in the real world.</p>
+            </div>
+            <div class="onboarding-actions">
+              <button class="btn btn-block" onclick="nextOnboardingStep()">Get Started</button>
+            </div>
+          </div>
+        `;
+      } else if (onboardingState.step === 1) {
+        app.innerHTML = `
+          <div class="onboarding">
+            <div class="onboarding-content">
+              <div class="onboarding-steps">
+                <div class="step-dot"></div>
+                <div class="step-dot active"></div>
+                <div class="step-dot"></div>
+              </div>
+              <h2>Choose Your AI</h2>
+              <p>SpeciesLog uses AI to identify species. Pick a provider:</p>
+              <div class="provider-cards">
+                ${Object.entries(PROVIDERS).map(([key, provider]) => `
+                  <div class="provider-card ${onboardingState.selectedProvider === key ? 'selected' : ''}" 
+                       onclick="selectProvider('${key}')">
+                    <div class="provider-card-header">
+                      ${provider.name}
+                    </div>
+                    <div class="provider-card-desc">${provider.tagline}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <div class="onboarding-actions">
+              <button class="btn btn-block" onclick="nextOnboardingStep()" 
+                      ${!onboardingState.selectedProvider ? 'disabled' : ''}>
+                Continue
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (onboardingState.step === 2) {
+        const provider = PROVIDERS[onboardingState.selectedProvider];
+        app.innerHTML = `
+          <div class="onboarding">
+            <div class="onboarding-content">
+              <div class="onboarding-steps">
+                <div class="step-dot"></div>
+                <div class="step-dot"></div>
+                <div class="step-dot active"></div>
+              </div>
+              <h2>Set Up ${provider.name}</h2>
+              <p>Enter your API key to enable species identification.</p>
+              <div class="api-key-help">
+                <a href="${provider.keyHelp}" target="_blank">Get your API key here →</a>
+              </div>
+              <input type="password" class="api-key-input" 
+                     placeholder="Paste your API key..." 
+                     value="${onboardingState.apiKey}"
+                     oninput="onboardingState.apiKey = this.value">
+              <p class="skip-link" onclick="skipOnboarding()">I'll do this later</p>
+            </div>
+            <div class="onboarding-actions">
+              <button class="btn btn-block" onclick="finishOnboarding()" id="finishBtn">
+                Validate & Continue
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function selectProvider(provider) {
+      onboardingState.selectedProvider = provider;
+      renderOnboarding();
+    }
+
+    function nextOnboardingStep() {
+      onboardingState.step++;
+      renderOnboarding();
+    }
+
+    async function finishOnboarding() {
+      const btn = $('#finishBtn');
+      btn.disabled = true;
+      btn.textContent = 'Validating...';
+
+      const isValid = await validateApiKey(
+        onboardingState.selectedProvider,
+        onboardingState.apiKey
+      );
+
+      if (isValid) {
+        await DB.saveSettings({
+          provider: onboardingState.selectedProvider,
+          apiKeys: {
+            [onboardingState.selectedProvider]: onboardingState.apiKey
+          },
+          photoQuality: 'high',
+          locationEnabled: true
+        });
+        renderApp();
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Validate & Continue';
+        showToast('Invalid API key. Please check and try again.', 'error');
+      }
+    }
+
+    function skipOnboarding() {
+      showToast('You need an API key to identify species.', 'error');
+    }
+
+    // Camera Functions
+    async function initCamera() {
+      const video = $('#cameraVideo');
+      if (!video) return;
+
+      // Stop any existing stream first
+      if (state.cameraStream) {
+        state.cameraStream.getTracks().forEach(t => t.stop());
+        state.cameraStream = null;
+      }
+
+      try {
+        // Check if getUserMedia is supported
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Camera not supported on this device/browser');
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: state.cameraFacing || 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+        
+        state.cameraStream = stream;
+        video.srcObject = stream;
+        
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => {
+            video.play().then(resolve).catch(resolve);
+          };
+        });
+        
+        console.log('Camera initialized successfully');
+      } catch (err) {
+        console.error('Camera error:', err);
+        
+        // Show appropriate error message
+        let message = 'Could not access camera.';
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          message = 'Camera permission denied. Please allow camera access in your browser settings.';
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          message = 'No camera found. Use the upload button instead.';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          message = 'Camera is in use by another app.';
+        } else if (err.name === 'OverconstrainedError') {
+          // Try again with less constraints
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            state.cameraStream = stream;
+            video.srcObject = stream;
+            return;
+          } catch (e) {
+            message = 'Camera not available. Use the upload button instead.';
+          }
+        }
+        
+        showToast(message, 'error');
+      }
+    }
+
+    function switchCamera() {
+      state.cameraFacing = state.cameraFacing === 'environment' ? 'user' : 'environment';
+      initCamera();
+    }
+
+    function showCapturePreview(imageBase64) {
+      // Stop the camera stream
+      stopCamera();
+      
+      // Show the captured/uploaded image as preview
+      const preview = $('#capturePreview');
+      if (preview) {
+        preview.src = imageBase64;
+        preview.classList.add('active');
+      }
+    }
+
+    function resumeCameraFeed() {
+      // Hide the preview image
+      const preview = $('#capturePreview');
+      if (preview) {
+        preview.classList.remove('active');
+        preview.src = '';
+      }
+      
+      // Restart camera if we're on the camera screen
+      if (state.currentScreen === 'camera') {
+        initCamera();
+      }
+    }
+
+    async function capturePhoto() {
+      const video = $('#cameraVideo');
+      if (!video || state.isIdentifying) {
+        console.log('Cannot capture: video not ready or already identifying');
+        return;
+      }
+      
+      // Check if video is actually playing
+      if (video.readyState < 2) {
+        showToast('Camera not ready. Please wait.', 'error');
+        return;
+      }
+
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+
+        // Capture high-res version for download
+        const highResImage = canvas.toDataURL('image/jpeg', 1.0);
+        state.pendingImageHighRes = highResImage;
+        
+        // Downscale to 720p for AI processing (max 1280px on longest side)
+        const imageBase64 = await compressImage(highResImage, 0.8, 1280);
+        
+        // Track image source for conditional download option
+        state.imageSource = 'capture';
+        
+        // Show the captured frame as preview
+        showCapturePreview(imageBase64);
+        
+        processImage(imageBase64);
+      } catch (err) {
+        console.error('Error capturing photo:', err);
+        showToast('Failed to capture photo', 'error');
+      }
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // Prevent duplicate processing
+      if (state.isIdentifying) {
+        console.log('Already processing, ignoring upload');
+        event.target.value = '';
+        return;
+      }
+
+      console.log('File uploaded:', file.name, file.size, 'bytes');
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          // Compress uploaded image first
+          const compressed = await compressImage(e.target.result, 0.8, 1200);
+          console.log('Uploaded image compressed');
+          
+          // Track image source for conditional download option
+          state.imageSource = 'upload';
+          
+          // Show the uploaded image as preview
+          showCapturePreview(compressed);
+          
+          processImage(compressed);
+        } catch (err) {
+          console.error('Error compressing image:', err);
+          showToast('Failed to process image', 'error');
+        }
+      };
+      reader.onerror = () => {
+        showToast('Failed to read file', 'error');
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    }
+
+    async function processImage(imageBase64) {
+      if (state.isIdentifying) {
+        console.log('Already identifying, ignoring');
+        return;
+      }
+      
+      console.log('Processing image, size:', Math.round(imageBase64.length / 1024), 'KB');
+      
+      state.isIdentifying = true;
+      state.pendingImage = imageBase64;  // Store BEFORE API call
+      
+      const overlay = $('#loadingOverlay');
+      if (overlay) overlay.classList.remove('hidden');
+
+      try {
+        const result = await identifySpecies(imageBase64);
+        console.log('Identification result:', result);
+        
+        state.identificationResult = result;  // Store result
+        
+        if (overlay) overlay.classList.add('hidden');
+        showIdentificationResult(result, imageBase64);
+      } catch (err) {
+        if (overlay) overlay.classList.add('hidden');
+        console.error('Identification error:', err);
+        
+        // Keep pendingImage for the error modal (will be cleared when modal is dismissed)
+        state.identificationResult = null;
+        
+        // Determine user-friendly error message
+        let errorMessage;
+        if (err.message === 'NO_API_KEY') {
+          errorMessage = 'No API key configured. Please set up your API key in Settings to identify species.';
+        } else if (err.message.includes('timed out')) {
+          errorMessage = 'The request timed out. Please check your connection and try again.';
+        } else if (err.message.includes('API error')) {
+          errorMessage = err.message;
+        } else {
+          errorMessage = 'Could not identify species. Please try again.';
+        }
+        
+        // Show error modal with image and download option
+        showErrorModal(imageBase64, errorMessage);
+      } finally {
+        state.isIdentifying = false;
+      }
+    }
+
+    function showIdentificationResult(result, imageBase64) {
+      const modal = $('#idResultModal');
+      const content = $('#idResultContent');
+
+      if (!result.identified) {
+        content.innerHTML = `
+          <div class="id-result">
+            <img src="${imageBase64}" class="id-result-image" alt="Captured">
+            <h2>Unable to Identify</h2>
+            <p class="id-result-description">
+              ${result.reason || 'Could not identify the species in this photo.'}
+              ${result.bestGuess ? `<br><br>Best guess: <strong>${result.bestGuess}</strong>` : ''}
+            </p>
+            <div class="id-result-actions">
+              <button class="btn btn-secondary" onclick="closeModal('idResultModal')">Retake</button>
+            </div>
+            ${state.imageSource === 'capture' ? `
+            <div class="id-result-download">
+              <a href="#" onclick="event.preventDefault(); downloadImage(state.pendingImageHighRes, null)">
+                <span class="material-symbols-rounded">download</span>
+                Download Photo
+              </a>
+            </div>
+            ` : ''}
+          </div>
+        `;
+      } else {
+        const confidenceClass = `confidence-${result.confidence}`;
+        content.innerHTML = `
+          <div class="id-result">
+            <img src="${imageBase64}" class="id-result-image" alt="${result.commonName}">
+            <h2>${result.commonName}</h2>
+            ${result.variety ? `<div class="id-result-variety">${result.variety}</div>` : ''}
+            <span class="scientific-name">${result.scientificName}</span>
+            <div class="mt-12" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span class="confidence-indicator ${confidenceClass}">
+                ${result.confidence === 'high' ? '✓' : result.confidence === 'medium' ? '~' : '?'} 
+                ${result.confidence}
+              </span>
+              ${getBadgeHTML(result.typeBadge)}
+            </div>
+            <p class="id-result-description">${result.description}</p>
+            <div class="id-result-actions">
+              <button class="btn btn-primary" id="saveEncounterBtn" onclick="saveEncounter()">
+                Save Encounter
+              </button>
+              <button class="btn btn-secondary" id="retakeBtn" onclick="closeModal('idResultModal')">
+                Retake
+              </button>
+            </div>
+            ${state.imageSource === 'capture' ? `
+            <div class="id-result-download">
+              <a href="#" onclick="event.preventDefault(); downloadImage(state.pendingImageHighRes, '${result.commonName.replace(/'/g, "\\'")}')">
+                <span class="material-symbols-rounded">download</span>
+                Download Photo
+              </a>
+            </div>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      modal.classList.add('active');
+    }
+
+    async function saveEncounter() {
+      const saveBtn = $('#saveEncounterBtn');
+      const retakeBtn = $('#retakeBtn');
+      
+      // Disable buttons and show saving state
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+      }
+      if (retakeBtn) {
+        retakeBtn.disabled = true;
+      }
+
+      try {
+        const result = state.identificationResult;
+        const imageBase64 = state.pendingImage;
+
+        if (!result || !imageBase64) {
+          console.error('Missing result or image', { result: !!result, image: !!imageBase64 });
+          showToast('Error: Missing identification data', 'error');
+          // Re-enable buttons on error
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Encounter';
+          }
+          if (retakeBtn) {
+            retakeBtn.disabled = false;
+          }
+          return;
+        }
+
+        // Get rank before saving to check for rank-up
+        const rankBefore = await getCurrentRank();
+
+        console.log('Saving encounter for:', result.commonName);
+
+        // Compress image to reduce storage size
+        const compressedImage = await compressImage(imageBase64, 0.6, 800);
+        console.log('Image compressed from', Math.round(imageBase64.length / 1024), 'KB to', Math.round(compressedImage.length / 1024), 'KB');
+
+        // Check if species already exists
+        const speciesKey = DB.normalizeSpeciesKey(result.scientificName);
+        let existingSpecies = await DB.getSpecies(speciesKey);
+        const isNewSpecies = !existingSpecies;
+
+        // Save species if new
+        if (!existingSpecies) {
+          console.log('Saving new species:', speciesKey);
+          await DB.saveSpecies({
+            scientificName: result.scientificName,
+            commonName: result.commonName,
+            typeBadge: result.typeBadge,
+            description: result.description,
+            funFacts: result.funFacts || [],
+            taxonomy: result.taxonomy || {},
+            confidence: result.confidence
+          });
+        }
+
+        // Get location
+        let location = null;
+        let locationName = 'Unknown location';
+        try {
+          const settings = await DB.getSettings();
+          if (settings.locationEnabled) {
+            location = await getCurrentLocation();
+            locationName = await reverseGeocode(location.lat, location.lng);
+          }
+        } catch (err) {
+          console.log('Location not available:', err.message);
+        }
+
+        // Save encounter
+        console.log('Adding encounter to database...');
+        const encounter = await DB.addEncounter({
+          speciesKey,
+          variety: result.variety || null,  // Store variety/subspecies with encounter
+          photoUri: compressedImage,
+          location,
+          locationName,
+          confidence: result.confidence
+        });
+        console.log('Encounter saved:', encounter.id);
+
+        // Check for rank-up
+        const rankAfter = await getCurrentRank();
+        const didRankUp = rankAfter.threshold > rankBefore.threshold;
+
+        closeModal('idResultModal');
+        
+        if (isNewSpecies) {
+          showConfetti();
+          showToast(`New species discovered: ${result.commonName}!`, 'success');
+        } else {
+          showToast(`${result.commonName} added to your encounters!`, 'success');
+        }
+
+        // Show rank-up toast after delay (so it doesn't overlap with encounter toast)
+        if (didRankUp) {
+          setTimeout(() => {
+            showToast(`You've become a ${rankAfter.name} 🌿`, 'success');
+          }, 3500);
+        }
+
+        // Refresh data
+        await renderSpeciesIndex();
+        await renderJourney();
+        
+      } catch (err) {
+        console.error('Error saving encounter:', err);
+        showToast('Failed to save encounter: ' + err.message, 'error');
+        // Re-enable buttons on error
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Encounter';
+        }
+        if (retakeBtn) {
+          retakeBtn.disabled = false;
+        }
+      }
+    }
+
+    // Compress image to reduce storage size
+    function compressImage(base64, quality = 0.6, maxWidth = 800) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Scale down if too large
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => {
+          // If compression fails, return original
+          resolve(base64);
+        };
+        img.src = base64;
+      });
+    }
+
+    // Download captured image to device
+    function downloadImage(imageBase64, speciesName) {
+      const link = document.createElement('a');
+      link.href = imageBase64;
+      
+      // Generate filename with timestamp (using local time)
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+      if (speciesName) {
+        // Sanitize species name for filename
+        const safeName = speciesName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        link.download = `specieslog-${safeName}-${timestamp}.jpg`;
+      } else {
+        link.download = `specieslog-capture-${timestamp}.jpg`;
+      }
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Photo saved to downloads', 'success');
+    }
+
+    function closeModal(modalId) {
+      $(`#${modalId}`).classList.remove('active');
+      // Clear pending image data when closing identification modal to free memory
+      if (modalId === 'idResultModal') {
+        state.pendingImage = null;
+        state.pendingImageHighRes = null;
+        state.imageSource = null;
+        state.identificationResult = null;
+        // Resume camera feed (hides preview, restarts camera)
+        resumeCameraFeed();
+      }
+    }
+
+    function showErrorModal(imageBase64, errorMessage) {
+      const modal = $('#idResultModal');
+      const content = $('#idResultContent');
+      
+      // Store image for download (use separate variable since we'll clear pendingImage later)
+      state.errorImage = imageBase64;
+      
+      const showDownload = state.imageSource === 'capture';
+      
+      content.innerHTML = `
+        <div class="id-result">
+          <img src="${imageBase64}" class="id-result-image" alt="Captured">
+          <h2>Something Went Wrong</h2>
+          <p class="id-result-description">${errorMessage}</p>
+          <div class="id-result-actions">
+            ${showDownload ? `
+            <button class="btn btn-secondary" onclick="downloadImage(state.pendingImageHighRes, null)">
+              <span class="material-symbols-rounded">download</span>
+              Download
+            </button>
+            ` : ''}
+            <button class="btn btn-primary" onclick="closeErrorModal()">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.add('active');
+    }
+
+    function closeErrorModal() {
+      const modal = $('#idResultModal');
+      modal.classList.remove('active');
+      
+      // Clear state
+      state.pendingImage = null;
+      state.pendingImageHighRes = null;
+      state.imageSource = null;
+      state.identificationResult = null;
+      state.errorImage = null;
+      
+      // Resume camera feed
+      resumeCameraFeed();
+    }
+
+    // Discoveries (Species Index)
+    let speciesFilter = { search: '', type: '', sort: 'recent-seen' };
+
+    // Load persisted filter preferences
+    async function loadFilterPreferences() {
+      try {
+        const saved = localStorage.getItem('specieslog_filter_prefs');
+        if (saved) {
+          const prefs = JSON.parse(saved);
+          speciesFilter.type = prefs.type || '';
+          speciesFilter.sort = prefs.sort || 'recent-seen';
+        }
+      } catch (e) {
+        console.log('Could not load filter preferences');
+      }
+    }
+
+    function saveFilterPreferences() {
+      try {
+        localStorage.setItem('specieslog_filter_prefs', JSON.stringify({
+          type: speciesFilter.type,
+          sort: speciesFilter.sort
+        }));
+      } catch (e) {
+        console.log('Could not save filter preferences');
+      }
+    }
+
+    async function renderSpeciesIndex() {
+      const container = $('#speciesList');
+      const resultsContainer = $('#filterResults');
+      if (!container) return;
+
+      const allSpecies = await DB.getAllSpecies();
+      const encounters = await DB.getEncounters();
+      const totalSpeciesCount = Object.keys(allSpecies).length;
+      
+      // Calculate encounter counts
+      const encounterCounts = {};
+      encounters.forEach(e => {
+        encounterCounts[e.speciesKey] = (encounterCounts[e.speciesKey] || 0) + 1;
+      });
+
+      // Get first photo for each species
+      const speciesPhotos = {};
+      encounters.forEach(e => {
+        if (!speciesPhotos[e.speciesKey] && e.photoUri) {
+          speciesPhotos[e.speciesKey] = e.photoUri;
+        }
+      });
+
+      // Calculate last seen and first seen timestamps for each species
+      const lastSeen = {};
+      const firstSeen = {};
+      encounters.forEach(e => {
+        if (!lastSeen[e.speciesKey] || e.timestamp > lastSeen[e.speciesKey]) {
+          lastSeen[e.speciesKey] = e.timestamp;
+        }
+        if (!firstSeen[e.speciesKey] || e.timestamp < firstSeen[e.speciesKey]) {
+          firstSeen[e.speciesKey] = e.timestamp;
+        }
+      });
+
+      let speciesList = Object.values(allSpecies);
+
+      // Apply filters
+      if (speciesFilter.search) {
+        const search = speciesFilter.search.toLowerCase();
+        speciesList = speciesList.filter(s =>
+          s.commonName.toLowerCase().includes(search) ||
+          s.scientificName.toLowerCase().includes(search)
+        );
+      }
+      if (speciesFilter.type) {
+        speciesList = speciesList.filter(s => s.typeBadge === speciesFilter.type);
+      }
+
+      const filteredCount = speciesList.length;
+      const isFiltered = speciesFilter.search || speciesFilter.type;
+
+      // Apply sort
+      switch (speciesFilter.sort) {
+        case 'recent-seen':
+          speciesList.sort((a, b) => {
+            const aTime = lastSeen[a.speciesKey] || '';
+            const bTime = lastSeen[b.speciesKey] || '';
+            return bTime.localeCompare(aTime);
+          });
+          break;
+        case 'oldest-seen':
+          speciesList.sort((a, b) => {
+            const aTime = lastSeen[a.speciesKey] || '';
+            const bTime = lastSeen[b.speciesKey] || '';
+            return aTime.localeCompare(bTime);
+          });
+          break;
+        case 'recent-added':
+          speciesList.sort((a, b) => {
+            const aTime = firstSeen[a.speciesKey] || '';
+            const bTime = firstSeen[b.speciesKey] || '';
+            return bTime.localeCompare(aTime);
+          });
+          break;
+        case 'first-added':
+          speciesList.sort((a, b) => {
+            const aTime = firstSeen[a.speciesKey] || '';
+            const bTime = firstSeen[b.speciesKey] || '';
+            return aTime.localeCompare(bTime);
+          });
+          break;
+        case 'name-asc':
+          speciesList.sort((a, b) => a.commonName.localeCompare(b.commonName));
+          break;
+        case 'name-desc':
+          speciesList.sort((a, b) => b.commonName.localeCompare(a.commonName));
+          break;
+        case 'most-encountered':
+          speciesList.sort((a, b) => {
+            const aCount = encounterCounts[a.speciesKey] || 0;
+            const bCount = encounterCounts[b.speciesKey] || 0;
+            if (bCount !== aCount) return bCount - aCount;
+            return a.commonName.localeCompare(b.commonName); // Alphabetical tie-breaker
+          });
+          break;
+        case 'least-encountered':
+          speciesList.sort((a, b) => {
+            const aCount = encounterCounts[a.speciesKey] || 0;
+            const bCount = encounterCounts[b.speciesKey] || 0;
+            if (aCount !== bCount) return aCount - bCount;
+            return a.commonName.localeCompare(b.commonName); // Alphabetical tie-breaker
+          });
+          break;
+      }
+
+      // Update results count
+      if (resultsContainer) {
+        if (totalSpeciesCount === 0) {
+          resultsContainer.innerHTML = '';
+        } else if (isFiltered) {
+          resultsContainer.innerHTML = `Showing ${filteredCount} of ${totalSpeciesCount} species<span class="clear-filters" onclick="clearFilters()">Clear filters</span>`;
+        } else {
+          resultsContainer.innerHTML = `${totalSpeciesCount} species`;
+        }
+      }
+
+      // Handle empty states
+      if (totalSpeciesCount === 0) {
+        // Truly empty collection
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🌱</div>
+            <h3>Your collection is empty!</h3>
+            <p>Head outside and photograph something living to start your journey.</p>
+            <button class="btn btn-primary" onclick="navigateTo('camera')">Open Camera</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (filteredCount === 0) {
+        // No matches for current filters
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🔍</div>
+            <h3>No matching species</h3>
+            <p>Try adjusting your search or filters.</p>
+            <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="species-list">
+          ${speciesList.map(species => `
+            <div class="species-card" onclick="viewSpecies('${species.speciesKey}')">
+              <img src="${speciesPhotos[species.speciesKey] || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23E0DDD6%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 font-size=%2240%22>🌿</text></svg>'}" 
+                   class="species-card-image" alt="${species.commonName}">
+              <div class="species-card-info">
+                <div class="species-card-name">${species.commonName}</div>
+                <div class="species-card-meta">
+                  ${getBadgeHTML(species.typeBadge)}
+                  <span>• ${encounterCounts[species.speciesKey] || 0} seen</span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    function filterSpecies(searchValue) {
+      if (searchValue !== undefined) {
+        speciesFilter.search = searchValue;
+      }
+      const typeFilter = $('#typeFilter');
+      if (typeFilter) {
+        speciesFilter.type = typeFilter.value;
+      }
+      const sortFilter = $('#sortFilter');
+      if (sortFilter) {
+        speciesFilter.sort = sortFilter.value;
+      }
+      saveFilterPreferences();
+      renderSpeciesIndex();
+    }
+
+    function clearFilters() {
+      speciesFilter.search = '';
+      speciesFilter.type = '';
+      // Keep sort preference when clearing filters
+      
+      const searchInput = $('#searchInput');
+      const typeFilter = $('#typeFilter');
+      if (searchInput) searchInput.value = '';
+      if (typeFilter) typeFilter.value = '';
+      
+      saveFilterPreferences();
+      renderSpeciesIndex();
+    }
+
+    async function viewSpecies(speciesKey) {
+      state.selectedSpecies = speciesKey;
+      
+      const species = await DB.getSpecies(speciesKey);
+      const encounters = await DB.getEncountersForSpecies(speciesKey);
+
+      // Collect unique varieties from encounters
+      const varieties = [...new Set(encounters.map(e => e.variety).filter(v => v))];
+
+      const screen = $('#screen-detail');
+      screen.innerHTML = `
+        <header class="header">
+          <button class="header-back" onclick="goBack()">←</button>
+          <span class="header-title">${species.commonName}</span>
+          <div style="width: 40px;"></div>
+        </header>
+        <div class="main-content species-detail">
+          <div class="species-hero">
+            <img src="${encounters[0]?.photoUri || ''}" class="species-hero-image" id="heroImage" alt="${species.commonName}">
+          </div>
+          ${encounters.length > 1 ? `
+            <div class="species-hero-gallery">
+              ${encounters.slice(0, 10).map((e, i) => `
+                <img src="${e.photoUri}" class="species-hero-thumb ${i === 0 ? 'active' : ''}" 
+                     onclick="setHeroImage('${e.photoUri}', this)" alt="Photo ${i + 1}">
+              `).join('')}
+            </div>
+          ` : ''}
+          <div class="species-info">
+            <h1>${species.commonName}</h1>
+            <span class="scientific-name">${species.scientificName}</span>
+            <div class="mt-12">${getBadgeHTML(species.typeBadge)}</div>
+          </div>
+          <div class="section">
+            <div class="section-title">About</div>
+            <p>${species.description}</p>
+          </div>
+          ${varieties.length > 0 ? `
+            <div class="section">
+              <div class="section-title">Varieties Encountered</div>
+              <div class="varieties-list">
+                ${varieties.map(v => `<span class="variety-tag">${v}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+          ${species.funFacts && species.funFacts.length > 0 ? `
+            <div class="section">
+              <div class="section-title">Fun Facts</div>
+              <ul class="fun-facts-list">
+                ${species.funFacts.map(fact => `<li>${fact}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          ${species.taxonomy ? `
+            <div class="section">
+              <div class="section-title">Taxonomy</div>
+              <table class="taxonomy-table">
+                ${Object.entries(species.taxonomy).map(([key, value]) => `
+                  <tr><td>${key}</td><td>${value}</td></tr>
+                `).join('')}
+              </table>
+            </div>
+          ` : ''}
+          <div class="section">
+            <div class="section-title">Your Encounters (${encounters.length})</div>
+            ${encounters.map(e => `
+              <div class="encounter-item">
+                <img src="${e.photoUri}" class="encounter-thumb" alt="Encounter">
+                <div class="encounter-info">
+                  ${e.variety ? `<div class="encounter-variety">${e.variety}</div>` : ''}
+                  <div class="encounter-location"><span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle;">location_on</span> ${e.locationName}</div>
+                  <div class="encounter-date">${formatDateTime(e.timestamp)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          ${encounters.some(e => e.location) ? `
+            <div class="section">
+              <div class="section-title">Where You've Seen It</div>
+              <div class="mini-map" id="speciesMap"></div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      navigateTo('detail');
+
+      // Initialize map if there are locations
+      const locatedEncounters = encounters.filter(e => e.location);
+      if (locatedEncounters.length > 0) {
+        setTimeout(() => {
+          const mapEl = $('#speciesMap');
+          if (mapEl && !state.maps.species) {
+            const map = L.map(mapEl).setView([locatedEncounters[0].location.lat, locatedEncounters[0].location.lng], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            const bounds = [];
+            locatedEncounters.forEach(e => {
+              const marker = L.marker([e.location.lat, e.location.lng]).addTo(map);
+              marker.bindPopup(`${formatDate(e.timestamp)}<br>${e.locationName}`);
+              bounds.push([e.location.lat, e.location.lng]);
+            });
+
+            if (bounds.length > 1) {
+              map.fitBounds(bounds, { padding: [30, 30] });
+            }
+
+            state.maps.species = map;
+          }
+        }, 100);
+      }
+    }
+
+    function setHeroImage(src, thumbEl) {
+      $('#heroImage').src = src;
+      $$('.species-hero-thumb').forEach(t => t.classList.remove('active'));
+      thumbEl.classList.add('active');
+    }
+
+    // Journey Screen
+    async function renderJourney() {
+      const content = $('#journeyContent');
+      const statsEl = $('#journeyStats');
+      if (!content) return;
+
+      const encounters = await DB.getEncounters();
+      const stats = await DB.getStats();
+      const rank = await getCurrentRank();
+
+      // Stats
+      const locations = new Set(encounters.map(e => e.locationName)).size;
+      if (statsEl) {
+        statsEl.innerHTML = `
+          <span class="rank-display">${rank.name}</span>
+          <span class="stats-divider">•</span>
+          <span><strong>${stats.totalSpecies}</strong> species</span>
+          <span><strong>${stats.totalEncounters}</strong> encounters</span>
+          <span><strong>${locations}</strong> locations</span>
+        `;
+      }
+
+      if (encounters.length === 0) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon"><span class="material-symbols-rounded" style="font-size: 64px;">explore</span></div>
+            <h3>No encounters yet</h3>
+            <p>Start capturing species to build your journey map.</p>
+            <button class="btn btn-primary" onclick="navigateTo('camera')">Open Camera</button>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.journeyView === 'timeline') {
+        renderJourneyTimeline(encounters, content);
+      } else {
+        renderJourneyMap(encounters, content);
+      }
+    }
+
+    async function renderJourneyTimeline(encounters, content) {
+      const allSpecies = await DB.getAllSpecies();
+
+      // Group by month and day
+      const grouped = {};
+      encounters.forEach(e => {
+        const date = new Date(e.timestamp);
+        const monthKey = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const dayKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        
+        if (!grouped[monthKey]) grouped[monthKey] = {};
+        if (!grouped[monthKey][dayKey]) grouped[monthKey][dayKey] = [];
+        grouped[monthKey][dayKey].push(e);
+      });
+
+      let html = '<div class="journey-timeline">';
+      
+      Object.entries(grouped).forEach(([month, days]) => {
+        html += `<div class="timeline-month">${month}</div>`;
+        
+        Object.entries(days).forEach(([day, dayEncounters]) => {
+          html += `
+            <div class="timeline-day">
+              <div class="timeline-date">${day}</div>
+              <div class="timeline-entries">
+                ${dayEncounters.map(e => {
+                  const species = allSpecies[e.speciesKey] || {};
+                  const badge = TYPE_BADGES[species.typeBadge] || TYPE_BADGES.mammal;
+                  const displayName = e.variety ? `${species.commonName || 'Unknown'} (${e.variety})` : (species.commonName || 'Unknown');
+                  return `
+                    <div class="timeline-entry" onclick="viewSpecies('${e.speciesKey}')">
+                      <span>${badge.icon}</span>
+                      <div style="flex: 1;">
+                        <div style="font-weight: 500; font-size: 14px;">${displayName}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">
+                          ${e.locationName} • ${formatTime(e.timestamp)}
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        });
+      });
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    async function renderJourneyMap(encounters, content) {
+      content.innerHTML = '<div class="full-map" id="journeyMap"></div>';
+
+      setTimeout(async () => {
+        const mapEl = $('#journeyMap');
+        if (!mapEl) return;
+
+        const allSpecies = await DB.getAllSpecies();
+        const locatedEncounters = encounters.filter(e => e.location);
+
+        if (locatedEncounters.length === 0) {
+          mapEl.innerHTML = '<div class="empty-state"><p>No location data available</p></div>';
+          return;
+        }
+
+        if (state.maps.journey) {
+          state.maps.journey.remove();
+        }
+
+        const map = L.map(mapEl).setView([locatedEncounters[0].location.lat, locatedEncounters[0].location.lng], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        const bounds = [];
+        locatedEncounters.forEach(e => {
+          const species = allSpecies[e.speciesKey] || {};
+          const badge = TYPE_BADGES[species.typeBadge] || TYPE_BADGES.mammal;
+          
+          const marker = L.marker([e.location.lat, e.location.lng]).addTo(map);
+          marker.bindPopup(`
+            <strong>${badge.icon} ${species.commonName || 'Unknown'}</strong><br>
+            ${formatDate(e.timestamp)}<br>
+            ${e.locationName}
+          `);
+          bounds.push([e.location.lat, e.location.lng]);
+        });
+
+        if (bounds.length > 1) {
+          map.fitBounds(bounds, { padding: [30, 30] });
+        }
+
+        state.maps.journey = map;
+      }, 100);
+    }
+
+    function setJourneyView(view) {
+      state.journeyView = view;
+      $$('.journey-toggle button').forEach(b => b.classList.remove('active'));
+      $(`.journey-toggle button:${view === 'timeline' ? 'first' : 'last'}-child`).classList.add('active');
+      renderJourney();
+    }
+
+    // Settings Screen
+    async function renderSettings() {
+      const screen = $('#screen-settings');
+      const settings = await DB.getSettings();
+      const stats = await DB.getStats();
+
+      const cacheHitRate = stats.apiCallsMade > 0 
+        ? Math.round((1 - (stats.totalSpecies / stats.apiCallsMade)) * 100)
+        : 0;
+
+      screen.innerHTML = `
+        <header class="header">
+          <button class="header-back" onclick="goBack()">←</button>
+          <span class="header-title">Settings</span>
+          <div style="width: 40px;"></div>
+        </header>
+        <div class="main-content" style="padding-bottom: 40px;">
+          <div class="settings-section">
+            <div class="settings-section-title">AI Provider</div>
+            <div class="radio-group">
+              ${Object.entries(PROVIDERS).map(([key, provider]) => `
+                <label class="radio-option">
+                  <input type="radio" name="provider" value="${key}" 
+                         ${settings.provider === key ? 'checked' : ''}
+                         onchange="changeProvider('${key}')">
+                  <span>
+                    ${provider.name}
+                    ${settings.apiKeys?.[key] ? '<span class="api-key-status valid">✓ Configured</span>' : ''}
+                  </span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">API Keys</div>
+            ${Object.entries(PROVIDERS).map(([key, provider]) => `
+              <div class="settings-item">
+                <div>
+                  <div class="settings-item-label">${provider.name}</div>
+                  <div class="settings-item-sublabel">
+                    ${settings.apiKeys?.[key] 
+                      ? `${settings.apiKeys[key].substring(0, 8)}...` 
+                      : 'Not configured'}
+                  </div>
+                </div>
+                <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;"
+                        onclick="showApiKeyModal('${key}')">
+                  ${settings.apiKeys?.[key] ? 'Edit' : 'Add'}
+                </button>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Preferences</div>
+            <div class="settings-item">
+              <div class="settings-item-label">Location Services</div>
+              <label style="display: flex; align-items: center;">
+                <input type="checkbox" ${settings.locationEnabled ? 'checked' : ''} 
+                       onchange="toggleLocation(this.checked)"
+                       style="width: 20px; height: 20px; accent-color: var(--primary);">
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Data Management</div>
+            <div class="settings-item">
+              <div class="settings-item-label">Export All Data</div>
+              <button class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;"
+                      onclick="exportData()"><span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">download</span>Export</button>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-label">Import Data</div>
+              <label class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px; cursor: pointer;">
+                <span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">upload</span>Import
+                <input type="file" accept=".json" style="display: none;" onchange="importData(event)">
+              </label>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-label">Clear All Data</div>
+              <button class="btn btn-danger" style="padding: 8px 16px; font-size: 12px;"
+                      onclick="confirmClearData()"><span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle; margin-right: 4px;">delete</span>Clear</button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">Stats</div>
+            <div class="settings-item">
+              <div class="settings-item-label">API Calls Made</div>
+              <div class="settings-item-value">${stats.apiCallsMade || 0}</div>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-label">Cache Efficiency</div>
+              <div class="settings-item-value">${cacheHitRate}%</div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">About</div>
+            <div class="settings-item">
+              <div class="settings-item-label">Version</div>
+              <div class="settings-item-value">1.0.0</div>
+            </div>
+            <div class="settings-item">
+              <div class="settings-item-label">AI Provider</div>
+              <div class="settings-item-value">${settings.provider ? PROVIDERS[settings.provider].name : 'Not set'}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function changeProvider(provider) {
+      const settings = await DB.getSettings();
+      settings.provider = provider;
+      await DB.saveSettings(settings);
+      
+      if (!settings.apiKeys?.[provider]) {
+        showApiKeyModal(provider);
+      } else {
+        showToast(`Switched to ${PROVIDERS[provider].name}`);
+      }
+    }
+
+    function showApiKeyModal(provider) {
+      const providerInfo = PROVIDERS[provider];
+      
+      const modalHtml = `
+        <div class="modal-overlay active" id="apiKeyModal" onclick="if(event.target === this) closeModal('apiKeyModal')">
+          <div class="modal">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+              <h2>${providerInfo.name}</h2>
+            </div>
+            <div class="modal-body">
+              <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Enter your API key for ${providerInfo.name}.
+              </p>
+              <p style="margin-bottom: 16px;">
+                <a href="${providerInfo.keyHelp}" target="_blank" style="color: var(--primary);">
+                  Get your API key here →
+                </a>
+              </p>
+              <input type="password" class="search-input" id="apiKeyInput" 
+                     placeholder="Paste your API key..." style="width: 100%;">
+              <div style="display: flex; gap: 12px; margin-top: 20px;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="closeModal('apiKeyModal')">
+                  Cancel
+                </button>
+                <button class="btn btn-primary" style="flex: 1;" id="saveKeyBtn"
+                        onclick="saveApiKey('${provider}')">
+                  Save Key
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async function saveApiKey(provider) {
+      const input = $('#apiKeyInput');
+      const btn = $('#saveKeyBtn');
+      const key = input.value.trim();
+
+      if (!key) {
+        showToast('Please enter an API key', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Validating...';
+
+      const isValid = await validateApiKey(provider, key);
+
+      if (isValid) {
+        const settings = await DB.getSettings();
+        settings.apiKeys = settings.apiKeys || {};
+        settings.apiKeys[provider] = key;
+        if (!settings.provider) {
+          settings.provider = provider;
+        }
+        await DB.saveSettings(settings);
+        
+        closeModal('apiKeyModal');
+        showToast('API key saved successfully!', 'success');
+        renderSettings();
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Save Key';
+        showToast('Invalid API key. Please check and try again.', 'error');
+      }
+    }
+
+    async function toggleLocation(enabled) {
+      const settings = await DB.getSettings();
+      settings.locationEnabled = enabled;
+      await DB.saveSettings(settings);
+    }
+
+    async function exportData() {
+      const data = await DB.exportAll();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      // Generate filename with local date
+      const now = new Date();
+      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `specieslog-export-${localDate}.json`;
+      a.click();
+      
+      URL.revokeObjectURL(url);
+      showToast('Data exported successfully!', 'success');
+    }
+
+    async function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        if (data.exportVersion !== '1.0') {
+          throw new Error('Incompatible version');
+        }
+
+        if (data.species) await DB.set('species', data.species);
+        if (data.encounters) await DB.set('encounters', data.encounters);
+        await DB.updateStats();
+
+        showToast('Data imported successfully!', 'success');
+        renderSpeciesIndex();
+        renderJourney();
+        renderSettings();
+      } catch (err) {
+        showToast('Failed to import data. Invalid file format.', 'error');
+      }
+
+      event.target.value = '';
+    }
+
+    function confirmClearData() {
+      if (confirm('Are you sure you want to delete all your data? This cannot be undone.')) {
+        if (confirm('This will delete all your species and encounters. Are you absolutely sure?')) {
+          DB.clearAll();
+          showToast('All data cleared', 'success');
+          renderSpeciesIndex();
+          renderJourney();
+          renderSettings();
+        }
+      }
+    }
+
+    // Navigation
+    function stopCamera() {
+      if (state.cameraStream) {
+        state.cameraStream.getTracks().forEach(track => track.stop());
+        state.cameraStream = null;
+      }
+      const video = $('#cameraVideo');
+      if (video) {
+        video.srcObject = null;
+      }
+    }
+
+    function navigateTo(screen) {
+      // Stop camera when leaving capture screen
+      if (state.currentScreen === 'camera' && screen !== 'camera') {
+        stopCamera();
+      }
+
+      // Clean up maps when leaving screens
+      if (state.maps.species) {
+        state.maps.species.remove();
+        state.maps.species = null;
+      }
+      if (screen !== 'journey' && state.maps.journey) {
+        state.maps.journey.remove();
+        state.maps.journey = null;
+      }
+
+      $$('.screen').forEach(s => s.classList.remove('active'));
+      $(`#screen-${screen}`).classList.add('active');
+
+      $$('.nav-item').forEach(n => n.classList.remove('active'));
+      const navMap = { camera: 0, index: 1, journey: 2 };
+      if (navMap[screen] !== undefined) {
+        // Update nav in all bottom-navs so whichever screen is visible shows correct state
+        $$('.bottom-nav').forEach(nav => {
+          nav.children[navMap[screen]]?.classList.add('active');
+        });
+      }
+
+      // Track previous screen before updating current
+      state.previousScreen = state.currentScreen;
+      state.currentScreen = screen;
+
+      // Render settings when navigating there
+      if (screen === 'settings') {
+        renderSettings();
+      }
+
+      // Reinit camera when going back to it
+      if (screen === 'camera') {
+        initCamera();
+      }
+
+      // Refresh journey map
+      if (screen === 'journey' && state.journeyView === 'map') {
+        renderJourney();
+      }
+    }
+
+    function goBack() {
+      // Default fallback screens for each screen type
+      const fallbacks = {
+        'detail': 'index',
+        'settings': 'camera'
+      };
+      
+      // Use previous screen, or fallback if previous doesn't make sense
+      const target = state.previousScreen || fallbacks[state.currentScreen] || 'camera';
+      navigateTo(target);
+    }
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', () => {
+      renderApp();
+    });
+
+    // Handle visibility change to manage camera
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Stop camera when app goes to background
+        if (state.currentScreen === 'camera') {
+          stopCamera();
+        }
+      } else {
+        // Restart camera when app comes back to foreground
+        // But only if preview is not showing (not in identification flow)
+        if (state.currentScreen === 'camera') {
+          const preview = $('#capturePreview');
+          const previewActive = preview && preview.classList.contains('active');
+          if (!previewActive) {
+            initCamera();
+          }
+        }
+      }
+    });
+
+    // Global error handlers to prevent freezing
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      // Reset identifying state if an error occurs
+      if (state.isIdentifying) {
+        state.isIdentifying = false;
+        const overlay = $('#loadingOverlay');
+        if (overlay) overlay.classList.add('hidden');
+        
+        // Show error modal if we have an image, otherwise just resume
+        if (state.pendingImage) {
+          showErrorModal(state.pendingImage, 'An unexpected error occurred. Please try again.');
+        } else {
+          resumeCameraFeed();
+          showToast('An error occurred. Please try again.', 'error');
+        }
+      }
+      event.preventDefault();
+    });
+
+    window.addEventListener('error', (event) => {
+      console.error('Global error:', event.error);
+      // Reset identifying state if an error occurs
+      if (state.isIdentifying) {
+        state.isIdentifying = false;
+        const overlay = $('#loadingOverlay');
+        if (overlay) overlay.classList.add('hidden');
+        
+        // Show error modal if we have an image, otherwise just resume
+        if (state.pendingImage) {
+          showErrorModal(state.pendingImage, 'An unexpected error occurred. Please try again.');
+        } else {
+          resumeCameraFeed();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
