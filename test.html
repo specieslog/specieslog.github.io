@@ -692,6 +692,28 @@
       margin-bottom: 2px;
     }
 
+    .encounter-delete {
+      background: none;
+      border: none;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: color 0.2s, background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .encounter-delete:hover {
+      color: var(--error);
+      background: rgba(229, 57, 53, 0.1);
+    }
+
+    .encounter-delete .material-symbols-rounded {
+      font-size: 20px;
+    }
+
     .varieties-list {
       display: flex;
       flex-wrap: wrap;
@@ -1521,7 +1543,7 @@ Choose the single most characteristic type.`;
       },
 
       normalizeSpeciesKey(scientificName) {
-        // Extract only genus + species (first two words) for consistent keying
+        // Extract only genus + species for consistent keying
         // This handles cases where LLMs return author citations like "Vulpes vulpes Linnaeus, 1758"
         const parts = scientificName.trim().split(/\s+/);
         
@@ -1529,11 +1551,23 @@ Choose the single most characteristic type.`;
         // "Juniperus" → "Juniperus sp."
         // "Juniperus species" → "Juniperus sp."
         // "Juniperus sp." → "Juniperus sp."
+        // Handle hybrids and rank indicators: "Chrysanthemum × morifolium", "Quercus cf. robur"
         let binomial;
         if (parts.length === 1) {
           binomial = `${parts[0]} sp.`;
         } else if (parts[1].toLowerCase() === 'species') {
           binomial = `${parts[0]} sp.`;
+        } else if (parts.length >= 3) {
+          // Check if second word is a rank indicator that precedes the epithet
+          const secondWord = parts[1].toLowerCase();
+          const isHybrid = parts[1] === '×' || secondWord === 'x';
+          const isRankIndicator = ['var.', 'var', 'subsp.', 'subsp', 'ssp.', 'ssp', 'f.', 'f', 'cf.', 'cf', 'aff.', 'aff'].includes(secondWord);
+          
+          if (isHybrid || isRankIndicator) {
+            binomial = parts.slice(0, 3).join(' ');
+          } else {
+            binomial = parts.slice(0, 2).join(' ');
+          }
         } else {
           binomial = parts.slice(0, 2).join(' ');
         }
@@ -1546,12 +1580,24 @@ Choose the single most characteristic type.`;
         // "Juniperus" → "Juniperus sp."
         // "Juniperus species" → "Juniperus sp."
         // "Vulpes vulpes Linnaeus, 1758" → "Vulpes vulpes"
+        // Handle hybrids and rank indicators: "Chrysanthemum × morifolium", "Quercus cf. robur"
         const parts = scientificName.trim().split(/\s+/);
         
         if (parts.length === 1) {
           return `${parts[0]} sp.`;
         } else if (parts[1].toLowerCase() === 'species') {
           return `${parts[0]} sp.`;
+        } else if (parts.length >= 3) {
+          // Check if second word is a rank indicator that precedes the epithet
+          const secondWord = parts[1].toLowerCase();
+          const isHybrid = parts[1] === '×' || secondWord === 'x';
+          const isRankIndicator = ['var.', 'var', 'subsp.', 'subsp', 'ssp.', 'ssp', 'f.', 'f', 'cf.', 'cf', 'aff.', 'aff'].includes(secondWord);
+          
+          if (isHybrid || isRankIndicator) {
+            return parts.slice(0, 3).join(' ');
+          } else {
+            return parts.slice(0, 2).join(' ');
+          }
         } else {
           return parts.slice(0, 2).join(' ');
         }
@@ -1604,6 +1650,30 @@ Choose the single most characteristic type.`;
       async getEncountersForSpecies(speciesKey) {
         const encounters = await this.get('encounters') || [];
         return encounters.filter(e => e.speciesKey === speciesKey);
+      },
+
+      async deleteEncounter(encounterId) {
+        const encounters = await this.get('encounters') || [];
+        const encounter = encounters.find(e => e.id === encounterId);
+        if (!encounter) return { deleted: false };
+        
+        const speciesKey = encounter.speciesKey;
+        const remainingForSpecies = encounters.filter(e => e.id !== encounterId && e.speciesKey === speciesKey);
+        const shouldDeleteSpecies = remainingForSpecies.length === 0;
+        
+        // Remove encounter
+        const updatedEncounters = encounters.filter(e => e.id !== encounterId);
+        await this.set('encounters', updatedEncounters);
+        
+        // Delete species if this was the last encounter
+        if (shouldDeleteSpecies) {
+          const species = await this.get('species') || {};
+          delete species[speciesKey];
+          await this.set('species', species);
+        }
+        
+        await this.updateStats();
+        return { deleted: true, speciesDeleted: shouldDeleteSpecies, speciesKey };
       },
 
       async getSettings() {
@@ -2307,6 +2377,7 @@ Choose the single most characteristic type.`;
               <p>Discover and collect every species you encounter in the real world.</p>
             </div>
             <div class="onboarding-actions">
+              <p style="font-size: 12px; opacity: 0.7; margin-bottom: 16px; text-align: center;">Identifications are AI-generated and may not always be accurate.</p>
               <button class="btn btn-block" onclick="nextOnboardingStep()">Get Started</button>
             </div>
           </div>
@@ -3227,6 +3298,9 @@ Choose the single most characteristic type.`;
                   <div class="encounter-location"><span class="material-symbols-rounded" style="font-size: 16px; vertical-align: middle;">location_on</span> ${e.locationName}</div>
                   <div class="encounter-date">${formatDateTime(e.timestamp)}</div>
                 </div>
+                <button class="encounter-delete" onclick="confirmDeleteEncounter('${e.id}', '${species.commonName.replace(/'/g, "\\'")}', ${encounters.length})" title="Delete encounter">
+                  <span class="material-symbols-rounded">delete</span>
+                </button>
               </div>
             `).join('')}
           </div>
@@ -3681,6 +3755,33 @@ Choose the single most characteristic type.`;
       }
     }
 
+    async function confirmDeleteEncounter(encounterId, speciesName, encounterCount) {
+      let confirmed = false;
+      
+      if (encounterCount === 1) {
+        // Last encounter - will also delete species
+        confirmed = confirm(`This is your only encounter of ${speciesName}. Deleting it will also remove this species from your collection. Continue?`);
+      } else {
+        confirmed = confirm('Delete this encounter?');
+      }
+      
+      if (confirmed) {
+        const result = await DB.deleteEncounter(encounterId);
+        
+        if (result.deleted) {
+          if (result.speciesDeleted) {
+            showToast(`${speciesName} removed from collection`, 'success');
+            navigateTo('index');
+            renderSpeciesIndex();
+          } else {
+            showToast('Encounter deleted', 'success');
+            viewSpecies(result.speciesKey);
+          }
+          renderJourney();
+        }
+      }
+    }
+
     // Navigation
     function stopCamera() {
       if (state.cameraStream) {
@@ -3722,7 +3823,10 @@ Choose the single most characteristic type.`;
       }
 
       // Track previous screen before updating current
-      state.previousScreen = state.currentScreen;
+      // Don't update if we're staying on the same screen (e.g., re-rendering detail after delete)
+      if (state.currentScreen !== screen) {
+        state.previousScreen = state.currentScreen;
+      }
       state.currentScreen = screen;
 
       // Render settings when navigating there
