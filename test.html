@@ -2818,15 +2818,17 @@ Choose the single most characteristic type.`;
 
         // Get location
         let location = null;
-        let locationName = 'Unknown location';
+        let locationName = 'No location data';  // Default: no GPS data at all
         try {
           const settings = await DB.getSettings();
           if (settings.locationEnabled) {
             location = await getCurrentLocation();
+            // We have coordinates, so at minimum it's "Unknown location" if geocoding fails
             locationName = await reverseGeocode(location.lat, location.lng);
           }
         } catch (err) {
-          console.log('Location not available:', err.message);
+          console.log('Location error:', err.message);
+          // locationName stays "No location data" since we failed to get coordinates
         }
 
         // Save encounter
@@ -3347,14 +3349,14 @@ Choose the single most characteristic type.`;
       const rank = await getCurrentRank();
 
       // Stats
-      const locations = new Set(encounters.map(e => e.locationName)).size;
+      // TODO: Location count is currently not meaningful due to geocoding granularity
+      // const locations = new Set(encounters.map(e => e.locationName)).size;
       if (statsEl) {
         statsEl.innerHTML = `
           <span class="rank-display">${rank.name}</span>
           <span class="stats-divider">•</span>
           <span><strong>${stats.totalSpecies}</strong> species</span>
           <span><strong>${stats.totalEncounters}</strong> encounters</span>
-          <span><strong>${locations}</strong> locations</span>
         `;
       }
 
