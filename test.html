@@ -3318,7 +3318,7 @@ Choose the single most characteristic type.`;
             const bounds = [];
             locatedEncounters.forEach(e => {
               const marker = L.marker([e.location.lat, e.location.lng]).addTo(map);
-              marker.bindPopup(`${formatDate(e.timestamp)}<br>${e.locationName}`);
+              marker.bindPopup(`${formatDateTime(e.timestamp)}<br>${e.locationName}`);
               bounds.push([e.location.lat, e.location.lng]);
             });
 
@@ -3462,7 +3462,7 @@ Choose the single most characteristic type.`;
           const marker = L.marker([e.location.lat, e.location.lng]).addTo(map);
           marker.bindPopup(`
             <strong>${badge.icon} ${species.commonName || 'Unknown'}</strong><br>
-            ${formatDate(e.timestamp)}<br>
+            ${formatDateTime(e.timestamp)}<br>
             ${e.locationName}
           `);
           bounds.push([e.location.lat, e.location.lng]);
